@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.platform === "win32" ? "npm.cmd run dev" : "npm run dev",
+    command: process.platform === "win32" ? "npm.cmd run start" : "npm run start",
     url: "http://localhost:3000",
     reuseExistingServer: false,
     timeout: 120000,

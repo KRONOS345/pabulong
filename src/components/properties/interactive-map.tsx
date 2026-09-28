@@ -257,7 +257,7 @@ export function InteractiveMap({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white text-sm">{activeProperty.name}</h3>
-                  <Badge variant="success" className="text-[10px]">
+                  <Badge variant="secondary" className="text-[10px]">
                     Verified
                   </Badge>
                 </div>

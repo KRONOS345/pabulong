@@ -12,6 +12,8 @@ export function HeaderUserButton() {
     () => false
   );
 
+  if (!isClient) return null;
+
   const pubKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
   const isDummyClerk =
     !pubKey ||
@@ -19,10 +21,10 @@ export function HeaderUserButton() {
     pubKey.includes("placeholder") ||
     pubKey.includes("ZXhhbXBsZS");
 
-  if (!isClient || isDummyClerk) {
+  if (isDummyClerk) {
     return (
-      <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-xs font-semibold text-white shadow-sm ring-2 ring-indigo-500/20">
-        OP
+      <div className="h-8 w-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-semibold text-primary select-none">
+        DEV
       </div>
     );
   }

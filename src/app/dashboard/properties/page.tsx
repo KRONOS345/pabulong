@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -64,8 +65,8 @@ export default function PropertiesPage() {
     fetchProperties().then((data) => {
       if (!ignore) {
         setProperties(data);
-        if (data.length > 0 && !selectedPropertyId) {
-          setSelectedPropertyId(data[0].id);
+        if (data.length > 0) {
+          setSelectedPropertyId((prev) => prev ?? data[0].id);
         }
         setLoading(false);
       }
@@ -73,7 +74,7 @@ export default function PropertiesPage() {
     return () => {
       ignore = true;
     };
-  }, [selectedPropertyId]);
+  }, []);
 
   const handleCreateHouse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,13 +154,13 @@ export default function PropertiesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center">
-              <Building className="h-5 w-5 text-indigo-400" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Building className="h-5 w-5 text-primary" />
             </div>
             Properties & Geolocation Center
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             PostGIS spatial mapping, room capacity monitoring, and student housing directory.
           </p>
         </div>
@@ -170,99 +171,101 @@ export default function PropertiesPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowMapView(!showMapView)}
-            className="gap-2 border-slate-800 bg-slate-900/80 text-xs text-indigo-300 hover:text-white"
+            className="gap-2 text-xs"
           >
-            <MapIcon className="h-3.5 w-3.5 text-indigo-400" />
+            <MapIcon className="h-3.5 w-3.5" />
             {showMapView ? "Hide Split Map" : "Show Split Map"}
           </Button>
 
           {/* New House Dialog */}
           <Dialog open={isHouseDialogOpen} onOpenChange={setIsHouseDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="gradient" className="gap-2 shadow-indigo-500/20 text-xs">
-                <Plus className="h-4 w-4" />
-                Add Boarding House
-              </Button>
+            <DialogTrigger 
+              render={
+                <Button className="gap-2 text-xs" />
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Add Boarding House
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Register Boarding House</DialogTitle>
-                <DialogDescription className="text-slate-400 text-xs">
+                <DialogTitle>Register Boarding House</DialogTitle>
+                <DialogDescription>
                   Creates a verified property listing enabled for PostGIS radius matching.
                 </DialogDescription>
               </DialogHeader>
 
               <form onSubmit={handleCreateHouse} className="space-y-3 pt-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Property Name</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="house-name">Property Name</Label>
                   <Input
+                    id="house-name"
                     placeholder="e.g. Apex Student Residences Block C"
                     value={houseName}
                     onChange={(e) => setHouseName(e.target.value)}
                     required
-                    className="bg-slate-900 border-slate-800"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Address / Location</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="house-address">Address / Location</Label>
                   <Input
+                    id="house-address"
                     placeholder="e.g. 74 University Ave, Near North Gate"
                     value={houseAddress}
                     onChange={(e) => setHouseAddress(e.target.value)}
                     required
-                    className="bg-slate-900 border-slate-800"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Description</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="house-description">Description</Label>
                   <Input
+                    id="house-description"
                     placeholder="Brief description of the facility"
                     value={houseDescription}
                     onChange={(e) => setHouseDescription(e.target.value)}
-                    className="bg-slate-900 border-slate-800"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Amenities (comma-separated)</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="house-amenities">Amenities (comma-separated)</Label>
                   <Input
+                    id="house-amenities"
                     placeholder="Fiber Wi-Fi, CCTV, Backup Generator"
                     value={houseAmenities}
                     onChange={(e) => setHouseAmenities(e.target.value)}
-                    className="bg-slate-900 border-slate-800"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">House Rules (comma-separated)</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="house-rules">House Rules (comma-separated)</Label>
                   <Input
+                    id="house-rules"
                     placeholder="10PM Curfew, No Smoking, Visitor Logs"
                     value={houseRules}
                     onChange={(e) => setHouseRules(e.target.value)}
-                    className="bg-slate-900 border-slate-800"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">Contact Email</label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="house-email">Contact Email</Label>
                     <Input
+                      id="house-email"
                       type="email"
                       placeholder="desk@residence.edu"
                       value={houseEmail}
                       onChange={(e) => setHouseEmail(e.target.value)}
-                      className="bg-slate-900 border-slate-800"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">Contact Phone</label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="house-phone">Contact Phone</Label>
                     <Input
+                      id="house-phone"
                       placeholder="+1 (555) 019-9922"
                       value={housePhone}
                       onChange={(e) => setHousePhone(e.target.value)}
-                      className="bg-slate-900 border-slate-800"
                     />
                   </div>
                 </div>
@@ -272,11 +275,10 @@ export default function PropertiesPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsHouseDialogOpen(false)}
-                    className="border-slate-800"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="gradient" disabled={submittingHouse}>
+                  <Button type="submit" disabled={submittingHouse}>
                     {submittingHouse ? "Saving..." : "Save Property"}
                   </Button>
                 </DialogFooter>
@@ -286,36 +288,39 @@ export default function PropertiesPage() {
 
           {/* New Room Dialog */}
           <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs"
-                onClick={() => {
-                  if (properties.length > 0 && !targetHouseId) {
-                    setTargetHouseId(properties[0].id);
-                  }
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Add Room
-              </Button>
+            <DialogTrigger 
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs"
+                  onClick={() => {
+                    if (properties.length > 0 && !targetHouseId) {
+                      setTargetHouseId(properties[0].id);
+                    }
+                  }}
+                />
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Add Room
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Create Room Unit</DialogTitle>
-                <DialogDescription className="text-slate-400 text-xs">
+                <DialogTitle>Create Room Unit</DialogTitle>
+                <DialogDescription>
                   Adds an inventory room slot linked to a verified boarding house.
                 </DialogDescription>
               </DialogHeader>
 
               <form onSubmit={handleCreateRoom} className="space-y-3 pt-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Boarding House</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="room-house">Boarding House</Label>
                   <select
+                    id="room-house"
                     value={targetHouseId}
                     onChange={(e) => setTargetHouseId(e.target.value)}
-                    className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     required
                   >
                     {properties.map((h) => (
@@ -327,50 +332,51 @@ export default function PropertiesPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">Unit / Room #</label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="room-unit">Unit / Room #</Label>
                     <Input
+                      id="room-unit"
                       placeholder="e.g. Unit 302"
                       value={roomNumber}
                       onChange={(e) => setRoomNumber(e.target.value)}
                       required
-                      className="bg-slate-900 border-slate-800"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">Max Capacity</label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="room-capacity">Max Capacity</Label>
                     <Input
+                      id="room-capacity"
                       type="number"
                       min="1"
                       max="8"
                       value={capacity}
                       onChange={(e) => setCapacity(e.target.value)}
                       required
-                      className="bg-slate-900 border-slate-800"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">Rent ($/month)</label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="room-rent">Rent ($/month)</Label>
                     <Input
+                      id="room-rent"
                       type="number"
                       min="50"
                       value={monthlyRent}
                       onChange={(e) => setMonthlyRent(e.target.value)}
                       required
-                      className="bg-slate-900 border-slate-800"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">Gender Policy</label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="room-gender">Gender Policy</Label>
                     <select
+                      id="room-gender"
                       value={genderPreference}
                       onChange={(e) =>
                         setGenderPreference(e.target.value as "male" | "female" | "any")
                       }
-                      className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="any">Any / Co-ed</option>
                       <option value="female">Female Only</option>
@@ -379,13 +385,13 @@ export default function PropertiesPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Room Features (comma-separated)</label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="room-features">Room Features (comma-separated)</Label>
                   <Input
+                    id="room-features"
                     placeholder="Ensuite Bath, Aircon, Study Desk, Balcony"
                     value={roomFeatures}
                     onChange={(e) => setRoomFeatures(e.target.value)}
-                    className="bg-slate-900 border-slate-800"
                   />
                 </div>
 
@@ -394,11 +400,10 @@ export default function PropertiesPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsRoomDialogOpen(false)}
-                    className="border-slate-800"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="gradient" disabled={submittingRoom}>
+                  <Button type="submit" disabled={submittingRoom}>
                     {submittingRoom ? "Saving..." : "Add Room Unit"}
                   </Button>
                 </DialogFooter>
@@ -410,50 +415,50 @@ export default function PropertiesPage() {
 
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-md">
+        <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center">
-              <Building className="h-5 w-5 text-indigo-400" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Building className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="text-xs text-slate-400">Boarding Houses</div>
-              <div className="text-xl font-bold font-mono text-white">{properties.length}</div>
+              <div className="text-xs text-muted-foreground">Boarding Houses</div>
+              <div className="text-xl font-bold font-mono">{properties.length}</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-md">
+        <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="text-xs text-slate-400">Available Rooms</div>
-              <div className="text-xl font-bold font-mono text-emerald-400">{availableRooms}</div>
+              <div className="text-xs text-muted-foreground">Available Rooms</div>
+              <div className="text-xl font-bold font-mono text-primary">{availableRooms}</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-md">
+        <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-400" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="text-xs text-slate-400">Occupied Units</div>
-              <div className="text-xl font-bold font-mono text-blue-400">{occupiedRooms}</div>
+              <div className="text-xs text-muted-foreground">Occupied Units</div>
+              <div className="text-xl font-bold font-mono">{occupiedRooms}</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-md">
+        <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
-              <Bed className="h-5 w-5 text-purple-400" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Bed className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="text-xs text-slate-400">Total Room Inventory</div>
-              <div className="text-xl font-bold font-mono text-purple-300">{totalRooms}</div>
+              <div className="text-xs text-muted-foreground">Total Room Inventory</div>
+              <div className="text-xl font-bold font-mono">{totalRooms}</div>
             </div>
           </CardContent>
         </Card>
@@ -461,7 +466,7 @@ export default function PropertiesPage() {
 
       {/* Main Split-Screen Content (Cards List + Interactive PostGIS Map) */}
       {loading ? (
-        <div className="h-64 flex items-center justify-center text-slate-400">
+        <div className="h-64 flex items-center justify-center text-muted-foreground">
           Loading property directory...
         </div>
       ) : (
@@ -475,40 +480,40 @@ export default function PropertiesPage() {
               return (
                 <Card
                   key={property.id}
-                  className={`border transition-all cursor-pointer backdrop-blur-md overflow-hidden ${
+                  className={`border transition-all cursor-pointer overflow-hidden ${
                     isSelected || isHovered
-                      ? "border-indigo-500/70 bg-slate-900/70 shadow-lg shadow-indigo-500/10"
-                      : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700"
+                      ? "border-primary/50 shadow-sm"
+                      : "hover:border-primary/30"
                   }`}
                   onMouseEnter={() => setHoveredPropertyId(property.id)}
                   onMouseLeave={() => setHoveredPropertyId(null)}
                   onClick={() => setSelectedPropertyId(property.id)}
                 >
-                  <CardHeader className="p-4 border-b border-slate-800/60 bg-slate-950/30">
+                  <CardHeader className="p-4 border-b bg-muted/30">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-base text-white font-semibold">
+                          <CardTitle className="text-base font-semibold">
                             {property.name}
                           </CardTitle>
-                          <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10 text-[10px]">
+                          <Badge variant="secondary" className="text-[10px]">
                             Verified
                           </Badge>
                         </div>
-                        <CardDescription className="text-slate-400 text-xs flex items-center gap-1.5 mt-1">
-                          <MapPin className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                        <CardDescription className="text-xs flex items-center gap-1.5 mt-1">
+                          <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
                           {property.address}
                         </CardDescription>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-emerald-400 font-mono font-semibold">
+                        <span className="text-primary font-mono font-semibold">
                           ${property.rooms?.[0]?.monthly_rent || 280}/mo
                         </span>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 text-[11px] text-indigo-300 hover:text-white px-2 gap-1"
+                          className="h-6 text-[11px] px-2 gap-1"
                           onClick={(e) => {
                             e.stopPropagation();
                             setTargetHouseId(property.id);
@@ -526,8 +531,8 @@ export default function PropertiesPage() {
                         {property.amenities.map((amenity) => (
                           <Badge
                             key={amenity}
-                            variant="secondary"
-                            className="text-[10px] bg-slate-800/70 text-slate-300 border border-slate-700/50"
+                            variant="outline"
+                            className="text-[10px] bg-muted/50"
                           >
                             {amenity}
                           </Badge>
@@ -537,9 +542,9 @@ export default function PropertiesPage() {
                   </CardHeader>
 
                   <CardContent className="p-4 space-y-3">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
                       <span>Room Inventory ({property.rooms?.length || 0})</span>
-                      <span className="text-[11px] font-normal text-slate-500">
+                      <span className="text-[11px] font-normal text-muted-foreground">
                         {property.rooms?.filter((r) => r.status === "available").length || 0} vacant
                       </span>
                     </div>
@@ -547,33 +552,33 @@ export default function PropertiesPage() {
                     {/* Room Units Mini Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {!property.rooms || property.rooms.length === 0 ? (
-                        <div className="col-span-full h-16 flex items-center justify-center border border-dashed border-slate-800 rounded-lg text-xs text-slate-500">
+                        <div className="col-span-full h-16 flex items-center justify-center border border-dashed rounded-lg text-xs text-muted-foreground">
                           No room units configured yet.
                         </div>
                       ) : (
                         property.rooms.map((room) => (
                           <div
                             key={room.id}
-                            className="rounded-lg border border-slate-800 bg-slate-950/50 p-2.5 space-y-1 text-xs"
+                            className="rounded-lg border bg-muted/30 p-2.5 space-y-1 text-xs"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-white">{room.room_number}</span>
+                              <span className="font-semibold">{room.room_number}</span>
                               <Badge
                                 variant={
                                   room.status === "available"
-                                    ? "success"
+                                    ? "default"
                                     : room.status === "occupied"
                                     ? "secondary"
-                                    : "warning"
+                                    : "outline"
                                 }
                                 className="text-[9px] capitalize"
                               >
                                 {room.status}
                               </Badge>
                             </div>
-                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                               <span>Capacity: {room.capacity}</span>
-                              <span className="text-emerald-400 font-mono font-medium">
+                              <span className="text-foreground font-mono font-medium">
                                 ${room.monthly_rent}/mo
                               </span>
                             </div>

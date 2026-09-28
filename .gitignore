@@ -42,5 +42,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
-.env*
+# project archives
+*.zip
+
+# credentials & environment config exports (contain real API keys)
+vercel-env.txt
+
+# one-off diagnostic / smoke-test scripts (not project source)
+check_body.mjs
+diagnose_404.mjs
+prod_smoke.mjs

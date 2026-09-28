@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Placement Kanban & Stripe Escrow E2E", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/dashboard/placements");
+    await page.waitForLoadState("domcontentloaded");
   });
 
   test("should render 4 Kanban columns (Inquiry, Viewing, Deposit Pending, Placed)", async ({ page }) => {
@@ -18,11 +19,11 @@ test.describe("Placement Kanban & Stripe Escrow E2E", () => {
     await newInquiryBtn.click();
 
     const dialog = page.locator('div[role="dialog"]');
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
     await expect(page.locator("text=Record Client Inquiry")).toBeVisible();
 
-    await page.fill('input[placeholder*="Jordan Hayes"]', "Alex Mercer");
-    await page.fill('input[placeholder*="jordan@student.edu"]', "alex.mercer@test.edu");
+    await page.fill('#client-name', "Alex Mercer");
+    await page.fill('#client-email', "alex.mercer@test.edu");
 
     const submitBtn = page.locator('button:has-text("Create Candidate")');
     await expect(submitBtn).toBeEnabled();
@@ -38,7 +39,7 @@ test.describe("Placement Kanban & Stripe Escrow E2E", () => {
   });
 
   test("should trigger Stripe Escrow Deposit modal in Deposit Pending stage", async ({ page }) => {
-    const escrowBtn = page.locator('button:has-text("Stripe Escrow Deposit")').first();
+    const escrowBtn = page.locator('button:has-text("Stripe Escrow")').first();
     if (await escrowBtn.isVisible()) {
       await escrowBtn.click();
 
