@@ -1,0 +1,64 @@
+# ==============================================================================
+# PABULONG PRODUCTION ENVIRONMENT KEYS (VERCEL PROJECT SETTINGS)
+# Copy & Paste into: Vercel Dashboard -> Project Settings -> Environment Variables
+# ==============================================================================
+
+# --- CLERK AUTHENTICATION ---
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_your_clerk_production_publishable_key
+# Description: Clerk production public key for browser frontend session token creation.
+# Source: Clerk Dashboard -> API Keys -> Publishable Key
+
+CLERK_SECRET_KEY=sk_live_your_clerk_production_secret_key
+# Description: Clerk production secret key used by Next.js server middleware.
+# Source: Clerk Dashboard -> API Keys -> Secret Key
+
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+# Description: Canonical route for unauthenticated login requests.
+
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+# Description: Canonical route for tenant and landlord registration.
+
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+# Description: Redirect target after successful user authentication.
+
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+# Description: Redirect target after successful account onboarding.
+
+
+# --- SUPABASE DATABASE & POSTGIS/PGVECTOR STORAGE ---
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+# Description: Supabase Cloud REST and PostgREST endpoint.
+# Source: Supabase Dashboard -> Project Settings -> API -> Project URL
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+# Description: Supabase public anonymous client key. Enforces Row Level Security (RLS).
+# Source: Supabase Dashboard -> Project Settings -> API -> anon / public
+
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+# Description: Supabase secret service role key (Never exposed to browser client).
+# Source: Supabase Dashboard -> Project Settings -> API -> service_role (secret)
+
+
+# --- STRIPE ESCROW FINTECH PAYMENTS ---
+STRIPE_SECRET_KEY=sk_live_your_stripe_production_secret_key
+# Description: Stripe production secret API key for creating escrow Checkout Sessions.
+# Source: Stripe Dashboard -> Developers -> API keys -> Secret key
+
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_your_stripe_production_publishable_key
+# Description: Stripe public key for client-side card elements.
+# Source: Stripe Dashboard -> Developers -> API keys -> Publishable key
+
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_production_webhook_secret
+# Description: Secret used to verify cryptographic webhook signatures from Stripe.
+# Source: Stripe Dashboard -> Developers -> Webhooks -> Signing secret
+
+
+# --- AI VECTOR SEARCH (OPTIONAL LIVE EMBEDDINGS) ---
+OPENAI_API_KEY=sk-proj-your-openai-api-key
+# Description: OpenAI API key used to generate 1536-dimensional embeddings for pgvector notes.
+# Source: OpenAI Platform Dashboard -> API Keys
+
+
+# --- HOSTING & CANONICAL DOMAIN ---
+NEXT_PUBLIC_APP_URL=https://pabulong.vercel.app
+# Description: Canonical production URL used for Stripe redirects, webhooks, and PWA manifest.
