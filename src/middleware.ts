@@ -10,8 +10,15 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 const pubKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
+// Pass through gracefully when:
+// - No key set
+// - Placeholder/dummy keys (local dev)
+// - Test-domain keys (pk_test_*) — these are Clerk dev-instance keys that
+//   only work on localhost or the configured Clerk dev domain, not on
+//   production .vercel.app domains. Use pk_live_* keys for production.
 const isDevPlaceholder =
   !pubKey ||
+  pubKey.startsWith("pk_test_") ||
   pubKey.includes("dummy") ||
   pubKey.includes("placeholder") ||
   pubKey.includes("ZXhhbXBsZS");
