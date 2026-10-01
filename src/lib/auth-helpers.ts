@@ -16,11 +16,15 @@ export function isDevMockEnabled(): boolean {
  */
 export function isSupabaseConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  // Supabase renamed the anon key to "publishable key" for new projects.
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    "";
   return (
     url.length > 0 &&
     !url.includes("placeholder") &&
-    key.length > 50 &&
+    key.length > 10 &&
     !key.includes("placeholder")
   );
 }

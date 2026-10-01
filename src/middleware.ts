@@ -9,19 +9,13 @@ const isProtectedRoute = createRouteMatcher([
   "/api/((?!webhooks).*)"
 ]);
 
-const pubKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
-// Pass through gracefully when:
-// - No key set
-// - Placeholder/dummy keys (local dev)
-// - Test-domain keys (pk_test_*) — these are Clerk dev-instance keys that
-//   only work on localhost or the configured Clerk dev domain, not on
-//   production .vercel.app domains. Use pk_live_* keys for production.
-const isDevPlaceholder =
-  !pubKey ||
-  pubKey.startsWith("pk_test_") ||
-  pubKey.includes("dummy") ||
-  pubKey.includes("placeholder") ||
-  pubKey.includes("ZXhhbXBsZS");
+// Only allow explicit local development mocks when intentionally enabled via ENABLE_DEV_MOCKS="true"
+// (e.g. for offline local development or automated Playwright E2E suites).
+// On deployed environments (e.g. VERCEL=1 or production without explicit flag), this is disabled.
+// Authentication is NEVER bypassed merely because a key starts with "pk_test_".
+const isDevMock =
+  !process.env.VERCEL &&
+  process.env.ENABLE_DEV_MOCKS === "true";
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
@@ -30,9 +24,8 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 });
 
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
-  // In local development or test mode with unconfigured placeholder keys,
-  // pass through gracefully to prevent Clerk "Invalid Host" errors
-  if (isDevPlaceholder) {
+  // Only allow explicit local development mocks where intentionally enabled
+  if (isDevMock) {
     return NextResponse.next();
   }
 

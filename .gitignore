@@ -52,3 +52,6 @@ vercel-env.txt
 check_body.mjs
 diagnose_404.mjs
 prod_smoke.mjs
+
+# supabase cli
+supabase/.temp/
