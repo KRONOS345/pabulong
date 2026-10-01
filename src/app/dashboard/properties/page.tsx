@@ -31,6 +31,7 @@ import {
 } from "@/actions/properties";
 import { type BoardingHouseItem } from "@/lib/property-types";
 import { InteractiveMap } from "@/components/properties/interactive-map";
+import { toast } from "sonner";
 
 export default function PropertiesPage() {
   const [properties, setProperties] = React.useState<BoardingHouseItem[]>([]);
@@ -101,6 +102,9 @@ export default function PropertiesPage() {
       setHouseName("");
       setHouseAddress("");
       setHouseDescription("");
+      toast.success(`Boarding house "${res.property.name}" registered`);
+    } else {
+      toast.error(res.error || "Failed to register boarding house");
     }
     setSubmittingHouse(false);
   };
@@ -134,6 +138,9 @@ export default function PropertiesPage() {
       setRoomNumber("");
       setCapacity("1");
       setMonthlyRent("350");
+      toast.success(`Room Unit ${res.room.room_number} added`);
+    } else {
+      toast.error(res.error || "Failed to create room");
     }
     setSubmittingRoom(false);
   };
@@ -473,7 +480,24 @@ export default function PropertiesPage() {
         <div className={`grid grid-cols-1 ${showMapView ? "lg:grid-cols-12" : "grid-cols-1"} gap-6`}>
           {/* Properties List Column */}
           <div className={`${showMapView ? "lg:col-span-7" : "col-span-full"} space-y-4`}>
-            {properties.map((property) => {
+            {properties.length === 0 ? (
+              <Card className="p-12 text-center bg-muted/30">
+                <Building className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-base font-medium">No boarding houses found</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">
+                  Register your first student housing property using the button above.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setIsHouseDialogOpen(true)}
+                  className="gap-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Boarding House
+                </Button>
+              </Card>
+            ) : (
+              properties.map((property) => {
               const isSelected = selectedPropertyId === property.id;
               const isHovered = hoveredPropertyId === property.id;
 
@@ -589,7 +613,7 @@ export default function PropertiesPage() {
                   </CardContent>
                 </Card>
               );
-            })}
+            }))}
           </div>
 
           {/* Interactive Split-Screen PostGIS Map Column */}

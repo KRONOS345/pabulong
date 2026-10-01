@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { fetchNotes, createNoteAction, type NoteItem } from "@/actions/notes";
 import { searchNotesSemantic } from "@/actions/ai-search";
+import { toast } from "sonner";
 
 export default function NotesPage() {
   const [notes, setNotes] = React.useState<NoteItem[]>([]);
@@ -107,6 +108,9 @@ export default function NotesPage() {
       setNewContent("");
       setNewTags("");
       setIsDialogOpen(false);
+      toast.success("Note saved to Second Brain");
+    } else {
+      toast.error(res.error || "Failed to save note");
     }
     setSubmitting(false);
   };
@@ -114,6 +118,7 @@ export default function NotesPage() {
   const copyToClipboard = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    toast.success("Note content copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 

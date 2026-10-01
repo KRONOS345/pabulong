@@ -45,6 +45,8 @@ import {
   createDepositCheckoutSession,
   verifyAndSettleDeposit,
 } from "@/actions/stripe";
+import { fetchProperties } from "@/actions/properties";
+import { toast } from "sonner";
 
 const STAGES: {
   stage: PlacementStage;
@@ -69,6 +71,9 @@ export default function PlacementsPage() {
   const [escrowLoading, setEscrowLoading] = React.useState(false);
   const [escrowSuccessMsg, setEscrowSuccessMsg] = React.useState<string | null>(null);
 
+  // Dynamic Rooms from live database
+  const [liveRooms, setLiveRooms] = React.useState<RoomOption[]>([]);
+
   // New Inquiry Form State
   const [clientName, setClientName] = React.useState("");
   const [clientEmail, setClientEmail] = React.useState("");
@@ -83,6 +88,26 @@ export default function PlacementsPage() {
       setPlacements(data);
     });
 
+    fetchProperties().then((houses) => {
+      const extracted: RoomOption[] = [];
+      houses.forEach((h) => {
+        h.rooms?.forEach((r) => {
+          extracted.push({
+            id: r.id,
+            boardingHouseName: h.name,
+            roomNumber: `Unit ${r.room_number}`,
+            monthlyRent: r.monthly_rent,
+            capacity: r.capacity,
+            genderPreference: r.gender_preference,
+            features: r.features || [],
+          });
+        });
+      });
+      if (extracted.length > 0) {
+        setLiveRooms(extracted);
+      }
+    }).catch(() => {});
+
     // Authoritatively verify deposit status if returning from Stripe checkout
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -96,6 +121,7 @@ export default function PlacementsPage() {
               setPlacements((prev) =>
                 prev.map((p) => (p.id === pId ? { ...p, stage: "Placed" } : p))
               );
+              toast.success("Deposit confirmed via Stripe Escrow!");
             }
           });
         }
@@ -104,22 +130,36 @@ export default function PlacementsPage() {
   }, []);
 
   const handleStageChange = async (id: string, newStage: PlacementStage) => {
-    setPlacements((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, stage: newStage } : p))
+    const prev = [...placements];
+    setPlacements((list) =>
+      list.map((p) => (p.id === id ? { ...p, stage: newStage } : p))
     );
-    await updatePlacementStage(id, newStage);
+    const res = await updatePlacementStage(id, newStage);
+    if (!res.success) {
+      setPlacements(prev);
+      toast.error(res.error || "Failed to update placement stage");
+    } else {
+      toast.success(`Candidate transitioned to ${newStage}`);
+    }
   };
 
   const handleMatchRoom = async (room: RoomOption) => {
     if (!activePlacementForMatch) return;
     const pId = activePlacementForMatch.id;
+    const prev = [...placements];
 
-    setPlacements((prev) =>
-      prev.map((p) =>
+    setPlacements((list) =>
+      list.map((p) =>
         p.id === pId ? { ...p, room_id: room.id, matched_room: room } : p
       )
     );
-    await matchPlacementRoom(pId, room.id);
+    const res = await matchPlacementRoom(pId, room.id);
+    if (!res.success) {
+      setPlacements(prev);
+      toast.error(res.error || "Failed to match room");
+    } else {
+      toast.success(`Matched to ${room.boardingHouseName} (${room.roomNumber})`);
+    }
     setIsMatchDialogOpen(false);
     setActivePlacementForMatch(null);
   };
@@ -154,10 +194,13 @@ export default function PlacementsPage() {
           `Deposit Secured: $${monthlyRent} escrow deposit confirmed in sandbox mode for ${escrowPlacement.client_name}!`
         );
         setIsEscrowDialogOpen(false);
+        toast.success(`Escrow deposit secured for ${escrowPlacement.client_name}`);
       } else {
         // Redirect to real Stripe Checkout URL
         window.location.href = res.checkoutUrl;
       }
+    } else {
+      toast.error(res.message || "Failed to initialize escrow checkout");
     }
     setEscrowLoading(false);
   };
@@ -168,12 +211,12 @@ export default function PlacementsPage() {
 
     setSubmitting(true);
     const res = await createPlacementAction({
-      client_name: clientName,
-      client_email: clientEmail,
-      client_phone: clientPhone || undefined,
+      client_name: clientName.trim(),
+      client_email: clientEmail.trim(),
+      client_phone: clientPhone.trim() || undefined,
       budget_max: Number(budgetMax) || 350,
-      preferred_location: preferredLocation || "Near Campus",
-      notes: notes || undefined,
+      preferred_location: preferredLocation.trim() || "Near Campus",
+      notes: notes.trim() || undefined,
     });
 
     if (res.success && res.placement) {
@@ -185,6 +228,9 @@ export default function PlacementsPage() {
       setPreferredLocation("");
       setNotes("");
       setIsNewDialogOpen(false);
+      toast.success(`Inquiry registered for ${res.placement.client_name}`);
+    } else {
+      toast.error(res.error || "Failed to create inquiry");
     }
     setSubmitting(false);
   };
@@ -513,7 +559,7 @@ export default function PlacementsPage() {
           </DialogHeader>
 
           <div className="space-y-3 py-2 max-h-96 overflow-y-auto">
-            {AVAILABLE_ROOMS.map((room) => {
+            {(liveRooms.length > 0 ? liveRooms : AVAILABLE_ROOMS).map((room) => {
               const isWithinBudget =
                 (activePlacementForMatch?.budget_max || 0) >= room.monthlyRent;
 

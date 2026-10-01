@@ -9,14 +9,19 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  * authenticates the user via `requesting_user_id()`.
  */
 export async function createClient() {
-  const cookieStore = await cookies();
+  let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    // Called outside an active Next.js request scope
+  }
 
   let token: string | null = null;
   try {
     const session = await auth();
     token = await session.getToken({ template: "supabase" });
   } catch {
-    // Unauthenticated or template not yet configured
+    // Unauthenticated, template not yet configured, or outside request scope
   }
 
   const supabaseUrl =
@@ -37,18 +42,19 @@ export async function createClient() {
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        return cookieStore.getAll();
+        return cookieStore ? cookieStore.getAll() : [];
       },
       setAll(
         cookiesToSet: Array<{
           name: string;
           value: string;
-          options?: Parameters<typeof cookieStore.set>[2];
+          options?: Parameters<NonNullable<typeof cookieStore>["set"]>[2];
         }>
       ) {
+        if (!cookieStore) return;
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore!.set(name, value, options)
           );
         } catch {
           // The `setAll` method was called from a Server Component.
