@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Pabulong | AI Second Brain & Boarding House Placement Platform",
+  title: "Pabulong | Butuan City Boarding Houses & Student Dormitories",
   description:
-    "Unified intelligence engine for semantic knowledge retention, student boarding house locator, and end-to-end placement orchestration.",
+    "Hyper-local marketplace connecting students and young professionals with verified boarding houses, dormitories, and rental spaces in Butuan City, Philippines.",
 };
 
 export default function RootLayout({
