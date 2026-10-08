@@ -179,3 +179,13 @@ export interface MarketplaceSearchParams {
   campus_lng?: number;
   radius_meters?: number;
 }
+
+export interface OwnerMetrics {
+  totalProperties: number;
+  totalRooms: number;
+  totalCapacity: number;
+  availableBeds: number;
+  occupancyRate: number;
+  pendingInquiriesCount: number;
+  totalInquiriesCount: number;
+}

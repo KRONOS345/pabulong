@@ -6,7 +6,7 @@ import { auth } from "@clerk/nextjs/server";
  */
 export function isDevMockEnabled(): boolean {
   return (
-    process.env.NODE_ENV !== "production" &&
+    !process.env.VERCEL &&
     process.env.ENABLE_DEV_MOCKS === "true"
   );
 }
@@ -45,7 +45,7 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
   }
 
   if (isDevMockEnabled()) {
-    return "user_dev_sandbox";
+    return process.env.DEV_MOCK_USER_ID || "user_operator_default";
   }
 
   return null;

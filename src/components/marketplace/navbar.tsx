@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Heart, LayoutDashboard, Menu } from "lucide-react";
+import { Home, Heart, Building, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -22,7 +22,7 @@ export function MarketplaceNavbar() {
   const navLinks = [
     { href: "/", label: "Discover", icon: Home },
     { href: "/saved", label: "Saved Listings", icon: Heart },
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/owner", label: "Landlord Portal", icon: Building },
   ];
 
   return (

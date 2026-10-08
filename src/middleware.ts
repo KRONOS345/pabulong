@@ -6,7 +6,8 @@ import type { NextRequest, NextFetchEvent } from "next/server";
 // Webhook endpoints (/api/webhooks/*) bypass Clerk session checks
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
-  "/api/((?!webhooks).*)"
+  "/owner(.*)",
+  "/api/((?!webhooks).*)",
 ]);
 
 // Only allow explicit local development mocks when intentionally enabled via ENABLE_DEV_MOCKS="true"

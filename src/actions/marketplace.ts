@@ -2,9 +2,11 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUserId } from "@/lib/auth-helpers";
 import type {
   BoardingHouse,
   Room,
+  Inquiry,
   Conversation,
   Message,
   Favorite,
@@ -12,8 +14,10 @@ import type {
   InquiryStatus,
   GenderRestriction,
   RoomType,
+  RoomStatus,
   UserRole,
   Profile,
+  OwnerMetrics,
 } from "@/lib/marketplace-types";
 
 // ========================================================================
@@ -220,7 +224,7 @@ export async function createPropertyAction(data: {
   longitude?: number;
   cover_image_url?: string;
 }): Promise<{ success: boolean; property?: BoardingHouse; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
@@ -297,7 +301,7 @@ export async function updatePropertyAction(
     cover_image_url: string;
   }>
 ): Promise<{ success: boolean; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
@@ -326,7 +330,7 @@ export async function updatePropertyAction(
 export async function archivePropertyAction(
   propertyId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
@@ -363,7 +367,7 @@ export async function createRoomAction(
     features?: string[];
   }
 ): Promise<{ success: boolean; room?: Room; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
@@ -420,6 +424,7 @@ export async function createRoomAction(
 
 /**
  * Update room details (rates, features, capacity).
+ * Verifies parent boarding house ownership defense-in-depth.
  */
 export async function updateRoomAction(
   roomId: string,
@@ -433,9 +438,12 @@ export async function updateRoomAction(
     is_available: boolean;
     gender_preference: "male" | "female" | "any";
     features: string[];
-  }>
+    floor_level: number;
+    status: RoomStatus;
+  }>,
+  propertyId?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
@@ -443,8 +451,38 @@ export async function updateRoomAction(
   if (data.monthly_rent !== undefined && data.monthly_rent <= 0) {
     return { success: false, error: "Monthly rent must be greater than ₱0" };
   }
+  if (data.capacity !== undefined && data.capacity < 1) {
+    return { success: false, error: "Capacity must be at least 1 person" };
+  }
 
   const supabase = await createClient();
+
+  // Defense-in-depth: Verify ownership
+  if (propertyId) {
+    const { data: house } = await supabase
+      .from("boarding_houses")
+      .select("id")
+      .eq("id", propertyId)
+      .eq("owner_id", userId)
+      .maybeSingle();
+
+    if (!house) {
+      return { success: false, error: "Property not found or unauthorized" };
+    }
+  } else {
+    const { data: roomWithHouse } = await supabase
+      .from("rooms")
+      .select("boarding_house_id, boarding_houses:boarding_house_id(owner_id)")
+      .eq("id", roomId)
+      .maybeSingle();
+
+    const parentOwner = (
+      roomWithHouse?.boarding_houses as unknown as { owner_id: string } | null
+    )?.owner_id;
+    if (!roomWithHouse || parentOwner !== userId) {
+      return { success: false, error: "Unauthorized or room not found" };
+    }
+  }
 
   const { error } = await supabase
     .from("rooms")
@@ -463,18 +501,47 @@ export async function updateRoomAction(
 
 /**
  * Toggle room vacancy availability.
+ * Verifies parent boarding house ownership defense-in-depth.
  */
 export async function updateRoomAvailabilityAction(
   roomId: string,
   isAvailable: boolean,
-  availableBeds?: number
+  availableBeds?: number,
+  propertyId?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
 
   const supabase = await createClient();
+
+  // Defense-in-depth: verify ownership
+  if (propertyId) {
+    const { data: house } = await supabase
+      .from("boarding_houses")
+      .select("id")
+      .eq("id", propertyId)
+      .eq("owner_id", userId)
+      .maybeSingle();
+
+    if (!house) {
+      return { success: false, error: "Property not found or unauthorized" };
+    }
+  } else {
+    const { data: roomWithHouse } = await supabase
+      .from("rooms")
+      .select("boarding_house_id, boarding_houses:boarding_house_id(owner_id)")
+      .eq("id", roomId)
+      .maybeSingle();
+
+    const parentOwner = (
+      roomWithHouse?.boarding_houses as unknown as { owner_id: string } | null
+    )?.owner_id;
+    if (!roomWithHouse || parentOwner !== userId) {
+      return { success: false, error: "Unauthorized or room not found" };
+    }
+  }
 
   const updatePayload: Record<string, unknown> = {
     is_available: isAvailable,
@@ -490,6 +557,46 @@ export async function updateRoomAvailabilityAction(
     .from("rooms")
     .update(updatePayload)
     .eq("id", roomId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Delete a room unit.
+ * Strictly verifies that the authenticated user owns the parent boarding house.
+ */
+export async function deleteRoomAction(
+  roomId: string,
+  propertyId: string
+): Promise<{ success: boolean; error?: string }> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const supabase = await createClient();
+
+  // Defense-in-depth: Verify parent property ownership
+  const { data: house, error: houseErr } = await supabase
+    .from("boarding_houses")
+    .select("id")
+    .eq("id", propertyId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (houseErr || !house) {
+    return { success: false, error: "Property not found or unauthorized" };
+  }
+
+  const { error } = await supabase
+    .from("rooms")
+    .delete()
+    .eq("id", roomId)
+    .eq("boarding_house_id", propertyId);
 
   if (error) {
     return { success: false, error: error.message };
@@ -924,3 +1031,208 @@ export async function syncProfile(data?: {
 
   return { success: true, profile: created as Profile };
 }
+
+// ========================================================================
+// 7. LANDLORD / OWNER WORKFLOWS
+// ========================================================================
+
+/**
+ * Fetch all properties owned by the authenticated landlord.
+ * Enforces ownership strictly via Clerk userId and Supabase RLS.
+ */
+export async function getOwnerPropertiesAction(): Promise<BoardingHouse[]> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("boarding_houses")
+    .select("*, rooms(*)")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("[getOwnerPropertiesAction] Error:", error?.message);
+    return [];
+  }
+
+  return (data as BoardingHouse[]).map((h) => ({
+    ...h,
+    min_rent:
+      h.rooms && h.rooms.length > 0
+        ? Math.min(...h.rooms.map((r) => r.monthly_rent))
+        : undefined,
+  }));
+}
+
+/**
+ * Fetch a single property owned by the authenticated landlord.
+ * Resolves strictly to null if not found or if the property belongs to another owner.
+ */
+export async function getOwnerPropertyByIdAction(
+  propertyId: string
+): Promise<BoardingHouse | null> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("boarding_houses")
+    .select("*, rooms(*), photos:property_photos(*)")
+    .eq("id", propertyId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  if (data.rooms) {
+    data.rooms.sort((a: Room, b: Room) =>
+      a.room_number.localeCompare(b.room_number, undefined, { numeric: true })
+    );
+  }
+
+  return data as BoardingHouse;
+}
+
+/**
+ * Fetch all incoming inquiries for the landlord's properties.
+ * Shows seeker contact info, target move-in date, room context, and message.
+ */
+export async function getOwnerInquiriesAction(
+  propertyId?: string
+): Promise<Inquiry[]> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return [];
+
+  const supabase = await createClient();
+
+  // First fetch properties owned by this landlord
+  let houseQuery = supabase
+    .from("boarding_houses")
+    .select("id")
+    .eq("owner_id", userId);
+
+  if (propertyId) {
+    houseQuery = houseQuery.eq("id", propertyId);
+  }
+
+  const { data: houses, error: houseErr } = await houseQuery;
+  if (houseErr || !houses || houses.length === 0) {
+    return [];
+  }
+
+  const houseIds = houses.map((h) => h.id);
+
+  const { data: inquiries, error } = await supabase
+    .from("inquiries")
+    .select(
+      "*, boarding_house:boarding_houses(id, name, address, cover_image_url), room:rooms(id, room_number, room_type, monthly_rent)"
+    )
+    .in("boarding_house_id", houseIds)
+    .order("created_at", { ascending: false });
+
+  if (error || !inquiries) {
+    console.error("[getOwnerInquiriesAction] Error:", error?.message);
+    return [];
+  }
+
+  // Populate seeker profile information
+  const seekerIds = Array.from(new Set(inquiries.map((i) => i.seeker_id)));
+  if (seekerIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, phone, avatar_url")
+      .in("id", seekerIds);
+
+    const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+    return inquiries.map((i) => ({
+      ...i,
+      seeker: profileMap.get(i.seeker_id) || undefined,
+    })) as Inquiry[];
+  }
+
+  return inquiries as Inquiry[];
+}
+
+/**
+ * Aggregate summary metrics across all properties owned by this landlord.
+ */
+export async function getOwnerMetricsAction(): Promise<OwnerMetrics> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) {
+    return {
+      totalProperties: 0,
+      totalRooms: 0,
+      totalCapacity: 0,
+      availableBeds: 0,
+      occupancyRate: 0,
+      pendingInquiriesCount: 0,
+      totalInquiriesCount: 0,
+    };
+  }
+
+  const supabase = await createClient();
+
+  // Fetch owned houses with their rooms
+  const { data: houses } = await supabase
+    .from("boarding_houses")
+    .select("id, rooms(*)")
+    .eq("owner_id", userId);
+
+  const ownedHouses = houses || [];
+  const houseIds = ownedHouses.map((h) => h.id);
+
+  let totalRooms = 0;
+  let totalCapacity = 0;
+  let availableBeds = 0;
+
+  for (const h of ownedHouses) {
+    if (h.rooms) {
+      for (const r of h.rooms) {
+        totalRooms += 1;
+        totalCapacity += r.capacity || 0;
+        availableBeds +=
+          r.available_beds !== undefined
+            ? r.available_beds
+            : r.is_available
+            ? r.capacity
+            : 0;
+      }
+    }
+  }
+
+  // Fetch inquiries for owned houses
+  let pendingInquiriesCount = 0;
+  let totalInquiriesCount = 0;
+
+  if (houseIds.length > 0) {
+    const { data: inquiries } = await supabase
+      .from("inquiries")
+      .select("id, status")
+      .in("boarding_house_id", houseIds);
+
+    if (inquiries) {
+      totalInquiriesCount = inquiries.length;
+      pendingInquiriesCount = inquiries.filter(
+        (i) => i.status === "new" || i.status === "viewing_requested"
+      ).length;
+    }
+  }
+
+  const occupiedBeds = Math.max(0, totalCapacity - availableBeds);
+  const occupancyRate =
+    totalCapacity > 0 ? Math.round((occupiedBeds / totalCapacity) * 100) : 0;
+
+  return {
+    totalProperties: ownedHouses.length,
+    totalRooms,
+    totalCapacity,
+    availableBeds,
+    occupancyRate,
+    pendingInquiriesCount,
+    totalInquiriesCount,
+  };
+}
+
