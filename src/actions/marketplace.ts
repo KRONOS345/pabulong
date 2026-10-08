@@ -457,7 +457,8 @@ export async function updateRoomAction(
 
   const supabase = await createClient();
 
-  // Defense-in-depth: Verify ownership
+  // Defense-in-depth: Verify ownership and resolve parent boarding house
+  let targetPropertyId = propertyId;
   if (propertyId) {
     const { data: house } = await supabase
       .from("boarding_houses")
@@ -482,15 +483,22 @@ export async function updateRoomAction(
     if (!roomWithHouse || parentOwner !== userId) {
       return { success: false, error: "Unauthorized or room not found" };
     }
+    targetPropertyId = roomWithHouse.boarding_house_id;
   }
 
-  const { error } = await supabase
+  let updateQuery = supabase
     .from("rooms")
     .update({
       ...data,
       updated_at: new Date().toISOString(),
     })
     .eq("id", roomId);
+
+  if (targetPropertyId) {
+    updateQuery = updateQuery.eq("boarding_house_id", targetPropertyId);
+  }
+
+  const { error } = await updateQuery;
 
   if (error) {
     return { success: false, error: error.message };
@@ -516,7 +524,8 @@ export async function updateRoomAvailabilityAction(
 
   const supabase = await createClient();
 
-  // Defense-in-depth: verify ownership
+  // Defense-in-depth: verify ownership and resolve parent boarding house
+  let targetPropertyId = propertyId;
   if (propertyId) {
     const { data: house } = await supabase
       .from("boarding_houses")
@@ -541,6 +550,7 @@ export async function updateRoomAvailabilityAction(
     if (!roomWithHouse || parentOwner !== userId) {
       return { success: false, error: "Unauthorized or room not found" };
     }
+    targetPropertyId = roomWithHouse.boarding_house_id;
   }
 
   const updatePayload: Record<string, unknown> = {
@@ -553,10 +563,16 @@ export async function updateRoomAvailabilityAction(
     updatePayload.available_beds = availableBeds;
   }
 
-  const { error } = await supabase
+  let updateQuery = supabase
     .from("rooms")
     .update(updatePayload)
     .eq("id", roomId);
+
+  if (targetPropertyId) {
+    updateQuery = updateQuery.eq("boarding_house_id", targetPropertyId);
+  }
+
+  const { error } = await updateQuery;
 
   if (error) {
     return { success: false, error: error.message };
@@ -808,7 +824,7 @@ export async function updateInquiryStatusAction(
   inquiryId: string,
   newStatus: InquiryStatus
 ): Promise<{ success: boolean; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
