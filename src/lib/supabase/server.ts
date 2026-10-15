@@ -19,9 +19,9 @@ export async function createClient() {
   let token: string | null = null;
   try {
     const session = await auth();
-    token = await session.getToken({ template: "supabase" });
+    token = await session.getToken();
   } catch {
-    // Unauthenticated, template not yet configured, or outside request scope
+    // Unauthenticated, session expired, or outside request scope
   }
 
   const supabaseUrl =
