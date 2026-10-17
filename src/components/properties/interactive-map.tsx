@@ -67,9 +67,9 @@ export function InteractiveMap({
       {/* Map Control Bar Header */}
       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl shadow-lg backdrop-blur-md">
-          <Navigation className="h-4 w-4 text-indigo-400" />
+          <Navigation className="h-4 w-4 text-emerald-400" />
           <span className="text-xs font-semibold text-white">PostGIS Spatial View</span>
-          <Badge variant="outline" className="border-indigo-500/40 text-indigo-300 text-[10px] bg-indigo-500/10">
+          <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 text-[10px] bg-emerald-500/10">
             EPSG:4326
           </Badge>
         </div>
@@ -209,7 +209,7 @@ export function InteractiveMap({
             property.rooms?.filter((r) => r.status === "available").length || 0;
           const minRent = property.rooms && property.rooms.length > 0
             ? Math.min(...property.rooms.map((r) => r.monthly_rent))
-            : 220;
+            : 2200;
 
           return (
             <div
@@ -226,14 +226,14 @@ export function InteractiveMap({
             >
               {/* Outer Pulsing Beacon when Active */}
               {(isSelected || isHovered) && (
-                <div className="absolute -inset-2 rounded-full bg-indigo-500/30 animate-ping pointer-events-none" />
+                <div className="absolute -inset-2 rounded-full bg-emerald-500/30 animate-ping pointer-events-none" />
               )}
 
               {/* Pin Pill Marker */}
               <div
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shadow-xl border transition-all ${
                   isSelected || isHovered
-                    ? "bg-indigo-600 border-indigo-300 text-white scale-110 shadow-indigo-500/50"
+                    ? "bg-emerald-600 border-emerald-300 text-white scale-110 shadow-emerald-500/50"
                     : "bg-slate-900/95 border-slate-700/80 text-slate-200 hover:border-slate-500"
                 }`}
               >
@@ -242,7 +242,7 @@ export function InteractiveMap({
                     availableUnits > 0 ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
                   }`}
                 />
-                <span className="font-mono text-[11px]">${minRent}</span>
+                <span className="font-mono text-[11px]">₱{minRent.toLocaleString()}</span>
               </div>
             </div>
           );
@@ -262,17 +262,17 @@ export function InteractiveMap({
                   </Badge>
                 </div>
                 <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                  <MapPin className="h-3 w-3 text-indigo-400 shrink-0" />
+                  <MapPin className="h-3 w-3 text-emerald-400 shrink-0" />
                   {activeProperty.address}
                 </p>
               </div>
 
               <div className="text-right shrink-0">
-                <span className="text-[11px] font-mono text-indigo-300 block">
+                <span className="text-[11px] font-mono text-emerald-300 block">
                   {calculateDistance(activeProperty.latitude, activeProperty.longitude)}m from Gate
                 </span>
                 <span className="text-xs font-bold text-emerald-400 font-mono">
-                  ${activeProperty.rooms?.[0]?.monthly_rent || 280}/mo avg
+                  ₱{(activeProperty.rooms?.[0]?.monthly_rent || 2500).toLocaleString()}/mo avg
                 </span>
               </div>
             </div>

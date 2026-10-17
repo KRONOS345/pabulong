@@ -111,7 +111,7 @@ export function DiscoveryFeed({
   return (
     <div className="space-y-6">
       {/* Search & Filters Container */}
-      <div className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
+      <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-md p-4 sm:p-6 shadow-sm">
         <FilterBar
           filters={filters}
           onChange={setFilters}
@@ -121,43 +121,47 @@ export function DiscoveryFeed({
       </div>
 
       {/* Discovery Meta Bar (Result counter & Sort selector) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-emerald-500" />
-          <span className="font-semibold text-foreground">
-            {isLoading ? "Searching available spaces..." : `${sortedListings.length} Boarding Houses Available`}
-          </span>
-          {filters.barangay !== "all" && (
-            <span className="text-muted-foreground text-xs">
-              in Barangay {filters.barangay}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm pt-2">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+            <Building2 className="h-4 w-4" />
+          </div>
+          <div>
+            <span className="font-bold text-foreground">
+              {isLoading ? "Searching available spaces..." : `${sortedListings.length} Boarding Houses`}
             </span>
-          )}
+            {filters.barangay !== "all" && (
+              <span className="text-muted-foreground text-xs ml-1.5 font-normal">
+                in Barangay {filters.barangay}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Sort Options */}
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <span className="text-xs text-muted-foreground">Sort by:</span>
+          <span className="text-xs text-muted-foreground font-medium">Sort by:</span>
           <Select
             value={sortBy}
             onValueChange={(v: "recommended" | "price_asc" | "price_desc" | "distance" | null) => {
               if (v) setSortBy(v);
             }}
           >
-            <SelectTrigger className="h-8 text-xs w-[160px] bg-background">
+            <SelectTrigger className="h-9 text-xs w-[170px] bg-background border-border/80 rounded-lg">
               <SelectValue>
                 {(val) => {
                   const map: Record<string, string> = {
-                    recommended: "Featured / Newest",
+                    recommended: "Featured / Recommended",
                     price_asc: "Price: Low to High",
                     price_desc: "Price: High to Low",
                     distance: "Nearest to Campus",
                   };
-                  return map[val as string] || "Featured / Newest";
+                  return map[val as string] || "Featured / Recommended";
                 }}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="recommended">Featured / Newest</SelectItem>
+              <SelectItem value="recommended">Featured / Recommended</SelectItem>
               <SelectItem value="price_asc">Price: Low to High</SelectItem>
               <SelectItem value="price_desc">Price: High to Low</SelectItem>
               <SelectItem value="distance">Nearest to Campus</SelectItem>
@@ -168,17 +172,17 @@ export function DiscoveryFeed({
 
       {/* State 1: Error State */}
       {error && (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-center space-y-3" role="alert">
-          <div className="mx-auto w-10 h-10 rounded-full bg-destructive/20 text-destructive flex items-center justify-center">
-            <AlertCircle className="h-5 w-5" />
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-8 text-center space-y-3" role="alert">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-destructive/20 text-destructive flex items-center justify-center">
+            <AlertCircle className="h-6 w-6" />
           </div>
-          <h3 className="font-semibold text-foreground text-base">Error Loading Listings</h3>
+          <h3 className="font-bold text-foreground text-base">Error Loading Boarding Houses</h3>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">{error}</p>
           <Button
             variant="outline"
             size="sm"
             onClick={() => fetchListings(filters)}
-            className="gap-1.5 text-xs h-8"
+            className="gap-1.5 text-xs h-8 rounded-lg mt-2"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Try Again
@@ -192,21 +196,21 @@ export function DiscoveryFeed({
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}
-              className="rounded-xl border border-border/60 bg-card overflow-hidden space-y-3 p-4 flex flex-col justify-between"
+              className="rounded-2xl border border-border/70 bg-card overflow-hidden p-5 flex flex-col justify-between space-y-4"
             >
               <div className="space-y-3">
-                <Skeleton className="aspect-[16/10] w-full rounded-lg" />
+                <Skeleton className="aspect-[16/10] w-full rounded-xl" />
                 <div className="flex items-center justify-between">
-                  <Skeleton className="h-3 w-1/3" />
-                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-3.5 w-1/3" />
+                  <Skeleton className="h-4 w-16 rounded-full" />
                 </div>
                 <Skeleton className="h-5 w-4/5" />
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-3 w-2/3" />
               </div>
-              <div className="flex items-center justify-between pt-3 border-t">
+              <div className="flex items-center justify-between pt-4 border-t border-border/60">
                 <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-8 w-24 rounded-md" />
+                <Skeleton className="h-8 w-24 rounded-lg" />
               </div>
             </div>
           ))}
@@ -216,23 +220,23 @@ export function DiscoveryFeed({
       {/* State 3: Empty State */}
       {!isLoading && !error && sortedListings.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16 px-4 text-center space-y-4">
-          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-            <Home className="h-6 w-6" />
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+            <Home className="h-7 w-7" />
           </div>
-          <div className="space-y-1">
-            <h3 className="font-semibold text-lg text-foreground">
+          <div className="space-y-1.5">
+            <h3 className="font-bold text-lg text-foreground">
               No Boarding Houses Found
             </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
-              We couldn&apos;t find any rental properties matching your active filters. Try broadening your budget or clearing campus/barangay restrictions.
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+              We couldn&apos;t find any rental properties matching your active filters. Try broadening your monthly budget or clearing specific campus restrictions.
             </p>
           </div>
           <Button
             onClick={handleResetFilters}
             variant="outline"
-            className="gap-2 h-9 text-xs font-medium"
+            className="gap-2 h-9 text-xs font-medium rounded-lg"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-3.5 w-3.5 text-primary" />
             Reset All Filters
           </Button>
         </div>

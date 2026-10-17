@@ -56,7 +56,7 @@ export default function PropertiesPage() {
   const [targetHouseId, setTargetHouseId] = React.useState<string>("");
   const [roomNumber, setRoomNumber] = React.useState("");
   const [capacity, setCapacity] = React.useState("1");
-  const [monthlyRent, setMonthlyRent] = React.useState("350");
+  const [monthlyRent, setMonthlyRent] = React.useState("2500");
   const [genderPreference, setGenderPreference] = React.useState<"male" | "female" | "any">("any");
   const [roomFeatures, setRoomFeatures] = React.useState("Ensuite Bath, Aircon, Desk & Chair");
   const [submittingRoom, setSubmittingRoom] = React.useState(false);
@@ -91,8 +91,8 @@ export default function PropertiesPage() {
       description: houseDescription || "Verified student and professional residence.",
       amenities: amenitiesArr,
       rules: rulesArr,
-      contact_email: houseEmail || "contact@pabulong.io",
-      contact_phone: housePhone || "+1 (555) 012-3456",
+      contact_email: houseEmail || "landlord@pabulong.ph",
+      contact_phone: housePhone || "+63 917 123 4567",
     });
 
     if (res.success && res.property) {
@@ -365,11 +365,11 @@ export default function PropertiesPage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="room-rent">Rent ($/month)</Label>
+                    <Label htmlFor="room-rent">Rent (₱/month)</Label>
                     <Input
                       id="room-rent"
                       type="number"
-                      min="50"
+                      min="500"
                       value={monthlyRent}
                       onChange={(e) => setMonthlyRent(e.target.value)}
                       required
@@ -532,7 +532,7 @@ export default function PropertiesPage() {
 
                       <div className="flex items-center gap-2 text-xs">
                         <span className="text-primary font-mono font-semibold">
-                          ${property.rooms?.[0]?.monthly_rent || 280}/mo
+                          ₱{(property.rooms?.[0]?.monthly_rent || 2500).toLocaleString()}/mo
                         </span>
                         <Button
                           variant="ghost"
@@ -603,7 +603,7 @@ export default function PropertiesPage() {
                             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                               <span>Capacity: {room.capacity}</span>
                               <span className="text-foreground font-mono font-medium">
-                                ${room.monthly_rent}/mo
+                                ₱{room.monthly_rent.toLocaleString()}/mo
                               </span>
                             </div>
                           </div>

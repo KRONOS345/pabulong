@@ -78,8 +78,8 @@ export default function PlacementsPage() {
   const [clientName, setClientName] = React.useState("");
   const [clientEmail, setClientEmail] = React.useState("");
   const [clientPhone, setClientPhone] = React.useState("");
-  const [budgetMax, setBudgetMax] = React.useState("400");
-  const [preferredLocation, setPreferredLocation] = React.useState("");
+  const [budgetMax, setBudgetMax] = React.useState("2500");
+  const [preferredLocation, setPreferredLocation] = React.useState("Ampayon (Near CSU)");
   const [notes, setNotes] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -191,7 +191,7 @@ export default function PlacementsPage() {
         // Mock instant escrow confirmation
         await handleStageChange(escrowPlacement.id, "Placed");
         setEscrowSuccessMsg(
-          `Deposit Secured: $${monthlyRent} escrow deposit confirmed in sandbox mode for ${escrowPlacement.client_name}!`
+          `Deposit Secured: ₱${monthlyRent.toLocaleString()} escrow deposit confirmed in sandbox mode for ${escrowPlacement.client_name}!`
         );
         setIsEscrowDialogOpen(false);
         toast.success(`Escrow deposit secured for ${escrowPlacement.client_name}`);
@@ -322,7 +322,7 @@ export default function PlacementsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="budget-max">Max Budget ($/mo)</Label>
+                  <Label htmlFor="budget-max">Max Budget (₱/mo)</Label>
                   <Input
                     id="budget-max"
                     type="number"
@@ -420,7 +420,7 @@ export default function PlacementsPage() {
                           variant="secondary"
                           className="text-[10px] shrink-0 font-mono"
                         >
-                          ${item.budget_max}/mo
+                          ₱{Number(item.budget_max).toLocaleString()}/mo
                         </Badge>
                       </div>
 
@@ -447,7 +447,7 @@ export default function PlacementsPage() {
                                 {item.matched_room.boardingHouseName}
                               </span>
                               <span className="text-primary font-mono font-medium">
-                                ${item.matched_room.monthlyRent}/mo
+                                ₱{item.matched_room.monthlyRent.toLocaleString()}/mo
                               </span>
                             </div>
                             <div className="text-[10px] text-muted-foreground flex items-center justify-between">
@@ -488,7 +488,7 @@ export default function PlacementsPage() {
                             className="w-full h-7 text-[11px] gap-1.5"
                           >
                             <CreditCard className="h-3 w-3" />
-                            Stripe Escrow (${item.matched_room?.monthlyRent || item.budget_max})
+                            Stripe Escrow (₱{(item.matched_room?.monthlyRent || Number(item.budget_max)).toLocaleString()})
                           </Button>
                         </div>
                       )}
@@ -552,7 +552,7 @@ export default function PlacementsPage() {
             <DialogDescription>
               Client budget:{" "}
               <span className="font-semibold font-mono text-foreground">
-                ${activePlacementForMatch?.budget_max}/month
+                ₱{Number(activePlacementForMatch?.budget_max || 0).toLocaleString()}/month
               </span>{" "}
               • Preferred Area: {activePlacementForMatch?.preferred_location}
             </DialogDescription>
@@ -598,7 +598,7 @@ export default function PlacementsPage() {
 
                   <div className="text-right space-y-2">
                     <div className="text-base font-bold font-mono">
-                      ${room.monthlyRent}
+                      ₱{room.monthlyRent.toLocaleString()}
                       <span className="text-xs font-normal text-muted-foreground">/mo</span>
                     </div>
 
@@ -649,7 +649,7 @@ export default function PlacementsPage() {
                 <div className="flex justify-between border-t pt-2 font-mono">
                   <span className="font-sans text-muted-foreground">Escrow Security Deposit:</span>
                   <span className="font-bold text-sm text-foreground">
-                    ${escrowPlacement.matched_room?.monthlyRent || escrowPlacement.budget_max}.00 USD
+                    ₱{(escrowPlacement.matched_room?.monthlyRent || Number(escrowPlacement.budget_max)).toLocaleString()}.00 PHP
                   </span>
                 </div>
               </div>

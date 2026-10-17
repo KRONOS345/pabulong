@@ -27,11 +27,14 @@ test.describe("Properties & PostGIS Spatial Map E2E", () => {
   });
 
   test("should synchronize card hover with map pin and display popup drawer", async ({ page }) => {
-    // Use attribute-based selector that matches the cursor-pointer Card regardless of nesting depth
+    // Locate the first property card in the listing column
     const propertyCard = page.locator("[class*='cursor-pointer']").first();
 
-    // Skip gracefully when the DB has no seeded properties (empty-environment is valid)
-    const hasCards = await propertyCard.isVisible({ timeout: 8000 }).catch(() => false);
+    // Wait for property cards to load from Supabase / API (or skip gracefully if environment has no properties)
+    const hasCards = await propertyCard
+      .waitFor({ state: "visible", timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
     if (!hasCards) {
       test.skip(true, "No property data in environment — skipping interaction test");
       return;

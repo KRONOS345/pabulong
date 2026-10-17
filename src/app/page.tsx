@@ -1,13 +1,13 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { MarketplaceNavbar } from "@/components/marketplace/navbar";
+import { MarketplaceFooter } from "@/components/marketplace/footer";
 import { DiscoveryFeed } from "@/components/marketplace/discovery-feed";
 import { searchListings, getUserFavoriteIdsAction } from "@/actions/marketplace";
-import { ShieldCheck, MapPin, Building } from "lucide-react";
+import { ShieldCheck, MapPin, Building2, GraduationCap, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
-  title: "Pabulong | Butuan City Boarding Houses & Rental Spaces",
+  title: "Pabulong | Butuan City Boarding Houses, Dorms & Student Rentals",
   description:
     "Find student dormitories, solo rooms, bedspaces, and rental pads in Butuan City. Compare rates, check proximity to CSU & FSUU, and inquire directly with landlords.",
 };
@@ -20,54 +20,63 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
       {/* Marketplace Top Navigation */}
       <MarketplaceNavbar />
 
       <main className="flex-1">
         {/* Marketplace Hero & Discovery Header */}
-        <section className="relative border-b border-border/60 bg-gradient-to-b from-muted/30 via-background to-background py-8 sm:py-12">
-          <div className="container mx-auto px-4 max-w-7xl">
-            <div className="max-w-3xl space-y-3">
+        <section className="relative border-b border-border/70 overflow-hidden bg-gradient-to-b from-primary/10 via-background/80 to-background py-10 sm:py-16">
+          {/* Subtle background glow effect */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-primary/5 blur-3xl pointer-events-none rounded-full" />
+
+          <div className="container mx-auto px-4 max-w-7xl relative z-10">
+            <div className="max-w-3xl space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                   variant="outline"
-                  className="bg-emerald-950/40 text-emerald-400 border-emerald-500/40 px-2.5 py-0.5 text-xs font-medium gap-1.5"
+                  className="bg-primary/10 text-primary border-primary/30 px-3 py-1 text-xs font-semibold gap-1.5 rounded-full shadow-xs"
                 >
-                  <MapPin className="h-3 w-3" />
+                  <MapPin className="h-3.5 w-3.5" />
                   Butuan City, Agusan del Norte
                 </Badge>
                 <Badge
                   variant="secondary"
-                  className="text-xs text-muted-foreground px-2.5 py-0.5"
+                  className="text-xs text-muted-foreground px-3 py-1 rounded-full font-medium"
                 >
+                  <GraduationCap className="h-3.5 w-3.5 mr-1 text-primary" />
                   Student & Professional Housing
                 </Badge>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]">
                 Find Boarding Houses & Rentals in Butuan
               </h1>
 
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
-                Discover verified solo rooms, shared bedspaces, and dormitories located near{" "}
-                <span className="text-foreground font-medium">Caraga State University (CSU)</span>,{" "}
-                <span className="text-foreground font-medium">FSUU Main & Morelos</span>, and downtown Butuan.
+                Browse verified solo rooms, shared bedspaces, and dormitories located walking distance or 1-tricycle ride from{" "}
+                <span className="text-foreground font-semibold">Caraga State University (CSU)</span>,{" "}
+                <span className="text-foreground font-semibold">FSUU Main & Morelos</span>,{" "}
+                <span className="text-foreground font-semibold">SJIT</span>, and downtown Butuan.
               </p>
 
               {/* Trust Indicators */}
-              <div className="pt-2 flex items-center gap-4 sm:gap-6 text-xs text-muted-foreground flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              <div className="pt-3 flex items-center gap-4 sm:gap-6 text-xs text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
                   <span>Verified Landlords</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-emerald-400">₱ PHP</span>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="font-bold text-primary">₱ PHP</span>
                   <span>Direct Local Rates</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Building className="h-4 w-4 text-emerald-500" />
-                  <span>Zero Agent Commissions</span>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span>Zero Broker Fees</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <span>Direct Chat & Viewing</span>
                 </div>
               </div>
             </div>
@@ -75,7 +84,7 @@ export default async function HomePage() {
         </section>
 
         {/* Live Marketplace Feed Section */}
-        <section className="container mx-auto px-4 max-w-7xl py-8">
+        <section className="container mx-auto px-4 max-w-7xl py-8 sm:py-12">
           <DiscoveryFeed
             initialListings={initialListings}
             initialFavoriteIds={initialFavoriteIds}
@@ -83,31 +92,8 @@ export default async function HomePage() {
         </section>
       </main>
 
-      {/* Localized Marketplace Footer */}
-      <footer className="border-t border-border/60 bg-muted/20 py-8 text-xs text-muted-foreground">
-        <div className="container mx-auto px-4 max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">Pabulong</span>
-            <span>— Butuan Housing Marketplace</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs">
-            <Link href="/" className="hover:text-foreground transition-colors">
-              Discover
-            </Link>
-            <Link href="/saved" className="hover:text-foreground transition-colors">
-              Saved Favorites
-            </Link>
-            <Link href="/dashboard" className="hover:text-foreground transition-colors">
-              Landlord Portal
-            </Link>
-          </div>
-
-          <div className="text-center sm:text-right">
-            <span>© {new Date().getFullYear()} Pabulong. Serving Butuan City, 8600.</span>
-          </div>
-        </div>
-      </footer>
+      {/* Shared Marketplace Footer */}
+      <MarketplaceFooter />
     </div>
   );
 }
