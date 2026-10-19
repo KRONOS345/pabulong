@@ -83,6 +83,7 @@ export function OwnerNav() {
 
         {/* Right CTA / Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Desktop Add Button */}
           <Link href="/owner/properties/new" className="hidden sm:inline-flex">
             <Button
               size="sm"
@@ -90,6 +91,17 @@ export function OwnerNav() {
             >
               <Plus className="h-4 w-4" />
               Add Boarding House
+            </Button>
+          </Link>
+
+          {/* Mobile Direct Add Action */}
+          <Link href="/owner/properties/new" className="inline-flex sm:hidden">
+            <Button
+              size="icon"
+              className="h-8 w-8 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+              aria-label="Add Boarding House"
+            >
+              <Plus className="h-4 w-4" />
             </Button>
           </Link>
 

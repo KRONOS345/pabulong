@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [["html", { open: "never" }], ["list"]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || "http://localhost:3000",
+    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || "http://localhost:3005",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -26,8 +26,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.platform === "win32" ? "npm.cmd run start" : "npm run start",
-    url: "http://localhost:3000",
+    command: process.platform === "win32" ? "cmd /c \"set ENABLE_DEV_MOCKS=true&& npx next start -p 3005\"" : "ENABLE_DEV_MOCKS=true npx next start -p 3005",
+    url: "http://localhost:3005",
     reuseExistingServer: false,
     timeout: 120000,
     env: {

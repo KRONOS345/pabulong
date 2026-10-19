@@ -65,10 +65,13 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
   }) => {
     await page.goto("/");
 
-    // Click on Balangay Residences card
-    await page.getByRole("heading", { name: "Balangay Student Residences - FSUU Campus" }).click();
+    // Click on Balangay Residences card link
+    const listingLink = page.getByRole("link", { name: "Balangay Student Residences - FSUU Campus" }).first();
+    await expect(listingLink).toBeVisible();
+    await listingLink.click();
 
     // Verify detail page URL
+    await page.waitForURL(/\/properties\/.+/);
     await expect(page).toHaveURL(/\/properties\/.+/);
 
     // Verify Property Detail Header
@@ -104,21 +107,103 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
     await expect(inquiryButton).toBeVisible();
   });
 
-  test("opens inquiry dialog with room options and move-in date picker", async ({ page }) => {
+  test("toggles discovery view modes between Grid, Split Map, and Full Map", async ({ page }) => {
+    await page.goto("/");
+
+    // 1. Initially in Grid view
+    const isMobile = page.viewportSize() ? page.viewportSize()!.width < 768 : false;
+    const gridBtn = page.getByRole("button", { name: "Grid view" });
+    const splitBtn = page.getByRole("button", { name: "Split view with map" });
+    const mapBtn = page.getByRole("button", { name: "Full map view" });
+
+    await expect(gridBtn).toBeVisible();
+    if (!isMobile) {
+      await expect(splitBtn).toBeVisible();
+    }
+    await expect(mapBtn).toBeVisible();
+
+    // 2. Switch to Full Map view
+    await mapBtn.click();
+    await expect(page.locator("text=PostGIS Spatial View")).toBeVisible();
+    await expect(page.locator("text=University Campus Gate")).toBeVisible();
+
+    // Verify distance rings exist
+    await expect(page.locator("text=150m")).toBeVisible();
+
+    // Verify map pins with PHP peso tags exist
+    const pins = page.locator("[role='button'][aria-label*='View']");
+    await expect(pins.first()).toBeVisible({ timeout: 10000 });
+
+    // Click on a pin to display listing popup drawer
+    await pins.first().click();
+    await expect(page.locator("text=from Gate").first()).toBeVisible();
+    await expect(page.locator("text=Available Rooms:").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "View Listing" }).first()).toBeVisible();
+
+    // 3. Switch back to Grid view
+    await gridBtn.click();
+    await expect(
+      page.getByRole("heading", { name: "Balangay Student Residences - FSUU Campus" })
+    ).toBeVisible();
+  });
+
+  test("opens rental inquiry & verification information dialog with appropriate fields and consent", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     // Open first listing detail
-    await page.getByRole("heading", { name: "Balangay Student Residences - FSUU Campus" }).click();
+    const cardLink = page.getByRole("link", { name: "Balangay Student Residences - FSUU Campus" }).first();
+    await expect(cardLink).toBeVisible();
+    await cardLink.click();
+    await page.waitForURL(/\/properties\/.+/);
 
     // Click Send Inquiry to Landlord
     await page.getByRole("button", { name: "Send Inquiry to Landlord" }).click();
 
-    // Verify Dialog opened
+    // Verify Dialog opened with preferred wording
     await expect(
-      page.getByRole("heading", { name: "Send Inquiry to Landlord" })
+      page.getByRole("heading", { name: "Rental Inquiry & Verification Information" })
     ).toBeVisible();
-    await expect(page.getByLabel("Message to Landlord *")).toBeVisible();
+
+    // Verify Purpose and Privacy Notice
+    await expect(page.getByText("Verification Purpose & Privacy Notice")).toBeVisible();
+    await expect(
+      page.getByText("This verification information helps the landlord evaluate tenancy fit", { exact: false })
+    ).toBeVisible();
+
+    // Verify Form Fields
+    await expect(page.getByLabel("Full Name *")).toBeVisible();
+    await expect(page.getByLabel("Contact Phone Number *")).toBeVisible();
+    await expect(page.getByLabel("Contact Email Address *")).toBeVisible();
     await expect(page.getByLabel("Target Move-In Date")).toBeVisible();
+    await expect(page.getByText("Expected Length of Stay *")).toBeVisible();
+    await expect(page.getByText("Number of Occupants *")).toBeVisible();
+    await expect(page.getByLabel("Message to Landlord *")).toBeVisible();
+
+    // Verify Field explanations / helper texts
+    await expect(
+      page.getByText("Used by the property owner to formally address you and record your inquiry.")
+    ).toBeVisible();
+    await expect(
+      page.getByText("Needed by the owner to coordinate on-site viewing and gate entry.")
+    ).toBeVisible();
+
+    // Verify Consent Checkbox & explanation
+    const consentLabel = page.getByText("Authorization & Consent to Share Information *");
+    await expect(consentLabel).toBeVisible();
+    await expect(
+      page.getByText("I authorize Pabulong to share this rental inquiry and verification information", { exact: false })
+    ).toBeVisible();
+
+    // Verify client validation prevents empty submission
+    const submitBtn = page.getByRole("button", { name: "Submit Inquiry & Details" });
+    await expect(submitBtn).toBeVisible();
+    await submitBtn.scrollIntoViewIfNeeded();
+    await submitBtn.click();
+
+    // Validation alert appears
+    await expect(page.getByText("Inquiry Incomplete")).toBeVisible();
   });
 
   test("handles unauthenticated favorite button safely with sign-in prompt", async ({ page }) => {

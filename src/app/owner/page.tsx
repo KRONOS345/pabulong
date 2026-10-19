@@ -32,7 +32,7 @@ export default async function OwnerDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/40">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             Landlord Command Center
@@ -41,13 +41,6 @@ export default async function OwnerDashboardPage() {
             Real-time overview of your boarding houses, room vacancies, and student leads across Butuan City.
           </p>
         </div>
-
-        <Link href="/owner/properties/new">
-          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm">
-            <Plus className="h-4 w-4" />
-            Add Boarding House
-          </Button>
-        </Link>
       </div>
 
       {/* KPI Stat Cards */}

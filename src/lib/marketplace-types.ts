@@ -115,6 +115,13 @@ export interface Inquiry {
   boarding_house_id: string;
   room_id?: string | null;
   target_move_in?: string | null;
+  full_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  stay_duration?: string | null;
+  occupant_count?: number | null;
+  seeker_notes?: string | null;
+  consent_given?: boolean;
   message: string;
   status: InquiryStatus;
   created_at: string;

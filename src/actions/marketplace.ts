@@ -140,10 +140,36 @@ export async function searchListings(
     );
   }
 
+const BUTUAN_BARANGAY_COORDS: Record<string, { lat: number; lng: number }> = {
+  Dagohoy: { lat: 8.9482, lng: 125.5432 },
+  Ampayon: { lat: 8.9561, lng: 125.5973 },
+  Libertad: { lat: 8.9430, lng: 125.5120 },
+  "Villa Kananga": { lat: 8.9390, lng: 125.5280 },
+  Doongan: { lat: 8.9510, lng: 125.5520 },
+  "San Vicente": { lat: 8.9550, lng: 125.5350 },
+  Bayanihan: { lat: 8.9495, lng: 125.5390 },
+  "Holy Redeemer": { lat: 8.9410, lng: 125.5360 },
+};
+
   return results.map((h) => {
     if (h.rooms && h.rooms.length > 0) {
       const rents = h.rooms.map((r) => r.monthly_rent);
       h.min_rent = Math.min(...rents);
+    }
+
+    const raw = h as unknown as Record<string, unknown>;
+    if (typeof raw.latitude !== "number" || typeof raw.longitude !== "number") {
+      const loc = raw.location as { coordinates?: number[] } | undefined;
+      if (loc && Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+        h.longitude = loc.coordinates[0];
+        h.latitude = loc.coordinates[1];
+      } else if (raw.barangay && typeof raw.barangay === "string" && BUTUAN_BARANGAY_COORDS[raw.barangay]) {
+        h.latitude = BUTUAN_BARANGAY_COORDS[raw.barangay].lat;
+        h.longitude = BUTUAN_BARANGAY_COORDS[raw.barangay].lng;
+      } else {
+        h.latitude = 8.9482;
+        h.longitude = 125.5432;
+      }
     }
     return h;
   });
@@ -738,18 +764,58 @@ export async function checkIsFavoritedAction(boardingHouseId: string): Promise<b
 // ========================================================================
 
 /**
- * Submit an inquiry for a boarding house and optional room.
+ * Submit an inquiry for a boarding house and optional room with verification step.
  * Automatically initializes a direct conversation between seeker and owner.
  */
 export async function createInquiryAction(data: {
   boardingHouseId: string;
   roomId?: string;
   targetMoveIn?: string;
+  fullName: string;
+  contactPhone: string;
+  contactEmail: string;
+  stayDuration: string;
+  occupantCount: number;
+  seekerNotes?: string;
+  consentGiven: boolean;
   message: string;
 }): Promise<{ success: boolean; inquiryId?: string; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
+  }
+
+  // Server-side validation of verification inputs
+  const fullName = data.fullName?.trim();
+  if (!fullName || fullName.length < 2 || fullName.length > 100) {
+    return { success: false, error: "Please provide a valid full name (2-100 characters)" };
+  }
+
+  const contactPhone = data.contactPhone?.trim();
+  if (!contactPhone || !/^[+0-9\s\-()]{7,25}$/.test(contactPhone)) {
+    return { success: false, error: "Please provide a valid contact phone number" };
+  }
+
+  const contactEmail = data.contactEmail?.trim();
+  if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    return { success: false, error: "Please provide a valid email address" };
+  }
+
+  const stayDuration = data.stayDuration?.trim();
+  if (!stayDuration) {
+    return { success: false, error: "Please select your expected length of stay" };
+  }
+
+  const occupantCount = Number(data.occupantCount);
+  if (!Number.isInteger(occupantCount) || occupantCount < 1 || occupantCount > 10) {
+    return { success: false, error: "Number of occupants must be between 1 and 10" };
+  }
+
+  if (!data.consentGiven) {
+    return {
+      success: false,
+      error: "You must consent to sharing your rental inquiry information with the property owner",
+    };
   }
 
   if (!data.message?.trim()) {
@@ -769,25 +835,68 @@ export async function createInquiryAction(data: {
     return { success: false, error: "Boarding house not found" };
   }
 
-  // 1. Insert Inquiry
-  const { data: inquiry, error: inqErr } = await supabase
+  // Build structured message summary for immediate visibility across all client versions
+  const verificationSummary = [
+    "--- RENTAL INQUIRY & VERIFICATION DETAILS ---",
+    `Applicant Name: ${fullName}`,
+    `Contact Phone: ${contactPhone}`,
+    `Contact Email: ${contactEmail}`,
+    `Target Move-in: ${data.targetMoveIn || "Flexible"}`,
+    `Expected Stay: ${stayDuration}`,
+    `Number of Occupants: ${occupantCount}`,
+    data.seekerNotes?.trim() ? `Applicant Background / Notes: ${data.seekerNotes.trim()}` : null,
+    "Consent: Explicitly authorized by applicant to share profile with property owner.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const completeMessage = `${data.message.trim()}\n\n${verificationSummary}`;
+
+  // 1. Insert Inquiry with verification fields, with graceful schema fallback
+  const insertPayload: Record<string, unknown> = {
+    seeker_id: userId,
+    boarding_house_id: data.boardingHouseId,
+    room_id: data.roomId || null,
+    target_move_in: data.targetMoveIn || null,
+    full_name: fullName,
+    contact_phone: contactPhone,
+    contact_email: contactEmail,
+    stay_duration: stayDuration,
+    occupant_count: occupantCount,
+    seeker_notes: data.seekerNotes?.trim() || null,
+    consent_given: true,
+    message: completeMessage,
+    status: "new",
+  };
+
+  let inquiryResult = await supabase
     .from("inquiries")
-    .insert([
-      {
-        seeker_id: userId,
-        boarding_house_id: data.boardingHouseId,
-        room_id: data.roomId || null,
-        target_move_in: data.targetMoveIn || null,
-        message: data.message.trim(),
-        status: "new",
-      },
-    ])
+    .insert([insertPayload])
     .select()
     .single();
 
-  if (inqErr || !inquiry) {
-    return { success: false, error: inqErr?.message || "Failed to create inquiry" };
+  // If newly added database columns are not yet recognized in older environments, fall back safely
+  if (inquiryResult.error && inquiryResult.error.message.toLowerCase().includes("column")) {
+    const fallbackPayload = {
+      seeker_id: userId,
+      boarding_house_id: data.boardingHouseId,
+      room_id: data.roomId || null,
+      target_move_in: data.targetMoveIn || null,
+      message: completeMessage,
+      status: "new",
+    };
+    inquiryResult = await supabase
+      .from("inquiries")
+      .insert([fallbackPayload])
+      .select()
+      .single();
   }
+
+  if (inquiryResult.error || !inquiryResult.data) {
+    return { success: false, error: inquiryResult.error?.message || "Failed to create inquiry" };
+  }
+
+  const inquiry = inquiryResult.data;
 
   // 2. Initialize Conversation & First Message
   const { data: conversation, error: convErr } = await supabase
@@ -808,7 +917,7 @@ export async function createInquiryAction(data: {
       {
         conversation_id: conversation.id,
         sender_id: userId,
-        content: data.message.trim(),
+        content: completeMessage,
         is_read: false,
       },
     ]);

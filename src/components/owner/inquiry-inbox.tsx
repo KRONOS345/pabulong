@@ -14,6 +14,8 @@ import {
   Clock,
   ExternalLink,
   ChevronDown,
+  ShieldCheck,
+  Users,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -195,28 +197,34 @@ export function InquiryInbox({ initialInquiries, properties }: InquiryInboxProps
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/40">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-sm shrink-0">
-                      {inquiry.seeker?.full_name?.charAt(0).toUpperCase() || (
+                      {(inquiry.full_name || inquiry.seeker?.full_name)?.charAt(0).toUpperCase() || (
                         <User className="h-5 w-5" />
                       )}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-base text-foreground">
-                          {inquiry.seeker?.full_name || "Prospective Boarder"}
+                          {inquiry.full_name || inquiry.seeker?.full_name || "Prospective Boarder"}
                         </span>
                         {getStatusBadge(inquiry.status)}
+                        {inquiry.consent_given && (
+                          <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] gap-1 px-1.5 py-0">
+                            <ShieldCheck className="h-2.5 w-2.5" />
+                            Verified Details
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                        {inquiry.seeker?.phone && (
-                          <span className="inline-flex items-center gap-1">
+                        {(inquiry.contact_phone || inquiry.seeker?.phone) && (
+                          <span className="inline-flex items-center gap-1 font-mono">
                             <Phone className="h-3 w-3 text-emerald-500" />
-                            {inquiry.seeker.phone}
+                            {inquiry.contact_phone || inquiry.seeker?.phone}
                           </span>
                         )}
-                        {inquiry.seeker?.email && (
+                        {(inquiry.contact_email || inquiry.seeker?.email) && (
                           <span className="inline-flex items-center gap-1">
                             <Mail className="h-3 w-3 text-muted-foreground" />
-                            {inquiry.seeker.email}
+                            {inquiry.contact_email || inquiry.seeker?.email}
                           </span>
                         )}
                       </div>
@@ -292,6 +300,48 @@ export function InquiryInbox({ initialInquiries, properties }: InquiryInboxProps
                     )}
                   </div>
                 </div>
+
+                {/* Rental Verification Summary Bar */}
+                {(inquiry.stay_duration || inquiry.occupant_count || inquiry.seeker_notes) && (
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-xs space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Rental Inquiry & Verification Profile
+                      </span>
+                      {inquiry.consent_given && (
+                        <span className="text-[10px] text-muted-foreground">
+                          Authorized by Applicant
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                      {inquiry.stay_duration && (
+                        <div>
+                          <span className="text-muted-foreground">Expected Stay: </span>
+                          <strong className="text-foreground font-medium">{inquiry.stay_duration}</strong>
+                        </div>
+                      )}
+                      {inquiry.occupant_count && (
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Intended Occupants: </span>
+                          <strong className="text-foreground font-medium">
+                            {inquiry.occupant_count === 1 ? "1 Person (Solo)" : `${inquiry.occupant_count} People`}
+                          </strong>
+                        </div>
+                      )}
+                    </div>
+
+                    {inquiry.seeker_notes && (
+                      <div className="pt-1 border-t border-emerald-500/15 text-[11px]">
+                        <span className="text-muted-foreground">Renter Background: </span>
+                        <span className="text-foreground">{inquiry.seeker_notes}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Seeker Message Body */}
                 <div className="space-y-1">

@@ -34,6 +34,25 @@ test.describe("Pabulong Phase 4 — Landlord / Owner Workflow & Security", () =>
     }
   });
 
+  test("FEATURE 3: Owner dashboard does not display duplicate Add Boarding House button", async ({ page }) => {
+    await page.goto("/owner");
+    await page.waitForLoadState("domcontentloaded");
+
+    // Desktop top navigation contains the primary action
+    const isMobile = page.viewportSize() ? page.viewportSize()!.width < 768 : false;
+    if (!isMobile) {
+      const navAddBtn = page
+        .getByRole("banner")
+        .getByRole("link", { name: "Add Boarding House" });
+      await expect(navAddBtn).toBeVisible();
+    }
+
+    // The welcome banner in the main dashboard content must NOT render a duplicate Add Boarding House button
+    const bannerContainer = page.locator(".bg-gradient-to-r").first();
+    const bannerAddBtn = bannerContainer.getByRole("link", { name: "Add Boarding House" });
+    await expect(bannerAddBtn).toHaveCount(0);
+  });
+
   test("lists owned boarding houses on /owner/properties with management actions", async ({ page }) => {
     await page.goto("/owner/properties");
     await page.waitForLoadState("domcontentloaded");

@@ -22,7 +22,16 @@ import {
   getUserFavoriteIdsAction,
 } from "@/actions/marketplace";
 import type { BoardingHouse } from "@/lib/marketplace-types";
-import { AlertCircle, RotateCcw, Home, Building2 } from "lucide-react";
+import {
+  AlertCircle,
+  RotateCcw,
+  Home,
+  Building2,
+  LayoutGrid,
+  Map as MapIcon,
+  Columns2,
+} from "lucide-react";
+import { InteractiveMap } from "@/components/properties/interactive-map";
 
 interface DiscoveryFeedProps {
   initialListings: BoardingHouse[];
@@ -39,6 +48,13 @@ export function DiscoveryFeed({
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [sortBy, setSortBy] = React.useState<"recommended" | "price_asc" | "price_desc" | "distance">("recommended");
+  const [viewMode, setViewMode] = React.useState<"grid" | "split" | "map">("grid");
+  const [selectedPropertyId, setSelectedPropertyId] = React.useState<string | null>(null);
+  const [hoveredPropertyId, setHoveredPropertyId] = React.useState<string | null>(null);
+
+  const activeCampus = React.useMemo(() => {
+    return BUTUAN_CAMPUSES.find((c) => c.id === filters.campusId);
+  }, [filters.campusId]);
 
   // Keep favorite IDs updated if user logs in
   React.useEffect(() => {
@@ -109,7 +125,7 @@ export function DiscoveryFeed({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-clip">
       {/* Search & Filters Container */}
       <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-md p-4 sm:p-6 shadow-sm">
         <FilterBar
@@ -138,35 +154,71 @@ export function DiscoveryFeed({
           </div>
         </div>
 
-        {/* Sort Options */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <span className="text-xs text-muted-foreground font-medium">Sort by:</span>
-          <Select
-            value={sortBy}
-            onValueChange={(v: "recommended" | "price_asc" | "price_desc" | "distance" | null) => {
-              if (v) setSortBy(v);
-            }}
-          >
-            <SelectTrigger className="h-9 text-xs w-[170px] bg-background border-border/80 rounded-lg">
-              <SelectValue>
-                {(val) => {
-                  const map: Record<string, string> = {
-                    recommended: "Featured / Recommended",
-                    price_asc: "Price: Low to High",
-                    price_desc: "Price: High to Low",
-                    distance: "Nearest to Campus",
-                  };
-                  return map[val as string] || "Featured / Recommended";
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recommended">Featured / Recommended</SelectItem>
-              <SelectItem value="price_asc">Price: Low to High</SelectItem>
-              <SelectItem value="price_desc">Price: High to Low</SelectItem>
-              <SelectItem value="distance">Nearest to Campus</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* View Mode Toggle & Sort Options */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          {/* View Mode Toggle */}
+          <div className="flex items-center p-0.5 rounded-lg bg-muted/60 border border-border/70">
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className="h-8 px-2.5 text-xs gap-1.5 rounded-md font-medium"
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Grid</span>
+            </Button>
+            <Button
+              variant={viewMode === "split" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("split")}
+              className="h-8 px-2.5 text-xs gap-1.5 rounded-md font-medium hidden md:flex"
+              aria-label="Split view with map"
+            >
+              <Columns2 className="h-3.5 w-3.5" />
+              <span>Split Map</span>
+            </Button>
+            <Button
+              variant={viewMode === "map" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("map")}
+              className="h-8 px-2.5 text-xs gap-1.5 rounded-md font-medium"
+              aria-label="Full map view"
+            >
+              <MapIcon className="h-3.5 w-3.5" />
+              <span>Map</span>
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Sort:</span>
+            <Select
+              value={sortBy}
+              onValueChange={(v: "recommended" | "price_asc" | "price_desc" | "distance" | null) => {
+                if (v) setSortBy(v);
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs w-[160px] bg-background border-border/80 rounded-lg">
+                <SelectValue>
+                  {(val) => {
+                    const map: Record<string, string> = {
+                      recommended: "Featured / Recommended",
+                      price_asc: "Price: Low to High",
+                      price_desc: "Price: High to Low",
+                      distance: "Nearest to Campus",
+                    };
+                    return map[val as string] || "Featured / Recommended";
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recommended">Featured / Recommended</SelectItem>
+                <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                <SelectItem value="distance">Nearest to Campus</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -242,17 +294,77 @@ export function DiscoveryFeed({
         </div>
       )}
 
-      {/* State 4: Real Seeded Listings Grid */}
+      {/* State 4: Real Seeded Listings (Grid, Split, or Full Map) */}
       {!isLoading && !error && sortedListings.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedListings.map((house) => (
-            <ListingCard
-              key={house.id}
-              house={house}
-              isFavorited={favoriteIds.includes(house.id)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Mode 1: Standard Grid View */}
+          {viewMode === "grid" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortedListings.map((house) => (
+                <ListingCard
+                  key={house.id}
+                  house={house}
+                  isFavorited={favoriteIds.includes(house.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Mode 2: Split View (Listings on left, Interactive Map on right) */}
+          {viewMode === "split" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-6 space-y-4 max-h-[720px] overflow-y-auto pr-1">
+                {sortedListings.map((house) => (
+                  <div
+                    key={house.id}
+                    onMouseEnter={() => setHoveredPropertyId(house.id)}
+                    onMouseLeave={() => setHoveredPropertyId(null)}
+                    onClick={() => setSelectedPropertyId(house.id)}
+                  >
+                    <ListingCard
+                      house={house}
+                      isFavorited={favoriteIds.includes(house.id)}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="lg:col-span-6 sticky top-20">
+                <InteractiveMap
+                  properties={sortedListings}
+                  selectedPropertyId={selectedPropertyId}
+                  hoveredPropertyId={hoveredPropertyId}
+                  onSelectProperty={setSelectedPropertyId}
+                  onHoverProperty={setHoveredPropertyId}
+                  center={
+                    activeCampus?.lat && activeCampus?.lng
+                      ? { lat: activeCampus.lat, lng: activeCampus.lng, name: activeCampus.name }
+                      : undefined
+                  }
+                  className="h-[680px]"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Mode 3: Full Map View */}
+          {viewMode === "map" && (
+            <div className="space-y-4">
+              <InteractiveMap
+                properties={sortedListings}
+                selectedPropertyId={selectedPropertyId}
+                hoveredPropertyId={hoveredPropertyId}
+                onSelectProperty={setSelectedPropertyId}
+                onHoverProperty={setHoveredPropertyId}
+                center={
+                  activeCampus?.lat && activeCampus?.lng
+                    ? { lat: activeCampus.lat, lng: activeCampus.lng, name: activeCampus.name }
+                    : undefined
+                }
+                className="h-[620px]"
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
