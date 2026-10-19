@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { createInquiryAction } from "@/actions/marketplace";
 import type { BoardingHouse, Room } from "@/lib/marketplace-types";
@@ -50,7 +50,6 @@ export function InquiryDialog({
   selectedRoomId,
   triggerButton,
 }: InquiryDialogProps) {
-  const { isSignedIn } = useAuth();
   const { user } = useUser();
 
   const [open, setOpen] = React.useState(false);
@@ -88,11 +87,6 @@ export function InquiryDialog({
   };
 
   const validateForm = (): boolean => {
-    if (!isSignedIn) {
-      setFormError("Please sign in to send an inquiry to the boarding house landlord.");
-      return false;
-    }
-
     if (!fullName.trim() || fullName.trim().length < 2) {
       setFormError("Full name is required (minimum 2 characters).");
       return false;

@@ -821,6 +821,12 @@ export async function createInquiryAction(data: {
   if (!data.message?.trim()) {
     return { success: false, error: "Message content cannot be empty" };
   }
+  if (data.message.trim().length > 2000) {
+    return { success: false, error: "Message cannot exceed 2,000 characters" };
+  }
+  if (data.seekerNotes && data.seekerNotes.trim().length > 500) {
+    return { success: false, error: "Notes cannot exceed 500 characters" };
+  }
 
   const supabase = await createClient();
 
@@ -833,6 +839,26 @@ export async function createInquiryAction(data: {
 
   if (houseErr || !house) {
     return { success: false, error: "Boarding house not found" };
+  }
+
+  // Rate-limiting: prevent duplicate submissions within 15 seconds
+  const { data: recentDuplicate } = await supabase
+    .from("inquiries")
+    .select("id, created_at")
+    .eq("seeker_id", userId)
+    .eq("boarding_house_id", data.boardingHouseId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentDuplicate && recentDuplicate.created_at) {
+    const elapsedMs = Date.now() - new Date(recentDuplicate.created_at).getTime();
+    if (elapsedMs < 15000) {
+      return {
+        success: false,
+        error: "Please wait a few moments before submitting another inquiry for this property",
+      };
+    }
   }
 
   // Build structured message summary for immediate visibility across all client versions
@@ -936,6 +962,17 @@ export async function updateInquiryStatusAction(
   const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
+  }
+
+  const validStatuses: InquiryStatus[] = [
+    "new",
+    "replied",
+    "viewing_requested",
+    "viewing_scheduled",
+    "closed",
+  ];
+  if (!validStatuses.includes(newStatus)) {
+    return { success: false, error: "Invalid inquiry status" };
   }
 
   const supabase = await createClient();

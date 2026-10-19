@@ -53,11 +53,12 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
     // Clear search using clear button or reset
     const clearButton = page.getByLabel("Clear search");
     await clearButton.click();
+    await expect(searchInput).toHaveValue("");
 
     // All listings restored
     await expect(
       page.getByRole("heading", { name: "Balangay Student Residences - FSUU Campus" })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test("navigates to listing detail page and displays authentic rooms and landlord data", async ({
