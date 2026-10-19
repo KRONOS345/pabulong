@@ -1129,6 +1129,9 @@ export async function createReportAction(data: {
 
 /**
  * Authoritatively sync or fetch the authenticated user's profile.
+ * SECURITY: Client-supplied privileged roles ("admin") are strictly rejected.
+ * New users can only onboard as "seeker" or "owner".
+ * Existing administrator profiles are preserved and cannot be self-demoted or escalated.
  */
 export async function syncProfile(data?: {
   fullName?: string;
@@ -1137,7 +1140,7 @@ export async function syncProfile(data?: {
   role?: UserRole;
   avatarUrl?: string;
 }): Promise<{ success: boolean; profile?: Profile; error?: string }> {
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
   }
@@ -1152,14 +1155,23 @@ export async function syncProfile(data?: {
 
   if (existing) {
     if (data) {
+      const updatePayload: Record<string, unknown> = {
+        full_name: data.fullName || existing.full_name,
+        phone: data.phone !== undefined ? data.phone : existing.phone,
+        avatar_url: data.avatarUrl !== undefined ? data.avatarUrl : existing.avatar_url,
+        updated_at: new Date().toISOString(),
+      };
+
+      // SECURITY: Users can legitimately transition from seeker -> owner during landlord onboarding,
+      // but client-initiated promotion to "admin" is strictly forbidden and ignored.
+      // If the user is already an admin, preserve their existing role.
+      if (data.role === "owner" && existing.role === "seeker") {
+        updatePayload.role = "owner";
+      }
+
       const { data: updated, error: updErr } = await supabase
         .from("profiles")
-        .update({
-          full_name: data.fullName || existing.full_name,
-          phone: data.phone !== undefined ? data.phone : existing.phone,
-          avatar_url: data.avatarUrl !== undefined ? data.avatarUrl : existing.avatar_url,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", userId)
         .select()
         .single();
@@ -1170,14 +1182,22 @@ export async function syncProfile(data?: {
     return { success: true, profile: existing as Profile };
   }
 
+  // Determine initial role for new user registration
+  // SECURITY: Disallow "admin" for any client-initiated registration or sync.
+  // Permitted self-onboarding roles are strictly "seeker" and "owner".
+  let initialRole: UserRole = "seeker";
+  if (data?.role === "owner") {
+    initialRole = "owner";
+  }
+
   // Create new profile record
   const newProfile = {
     id: userId,
-    email: data?.email || "",
+    email: data?.email ? data.email.trim().toLowerCase() : "",
     full_name: data?.fullName || "Pabulong User",
     phone: data?.phone || null,
     avatar_url: data?.avatarUrl || null,
-    role: data?.role || "seeker",
+    role: initialRole,
     is_verified: false,
   };
 

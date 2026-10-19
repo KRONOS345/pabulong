@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
-    "db:seed": "npx tsx scripts/seed-production-data.ts"
+    "db:seed": "npx tsx scripts/seed-production-data.ts",
+    "admin:promote": "npx tsx scripts/promote-admin.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -99,6 +99,7 @@ RETURNS TEXT AS $$
 $$ LANGUAGE SQL STABLE;
 
 -- Notes Policies (User can only read, write, and manage their own notes)
+DROP POLICY IF EXISTS "Users can manage own notes" ON public.notes;
 CREATE POLICY "Users can manage own notes"
 ON public.notes
 FOR ALL
@@ -106,18 +107,21 @@ USING (user_id = public.requesting_user_id())
 WITH CHECK (user_id = public.requesting_user_id());
 
 -- Boarding Houses Policies (Owners can manage; authenticated users can view)
+DROP POLICY IF EXISTS "Owners can manage own boarding houses" ON public.boarding_houses;
 CREATE POLICY "Owners can manage own boarding houses"
 ON public.boarding_houses
 FOR ALL
 USING (owner_id = public.requesting_user_id())
 WITH CHECK (owner_id = public.requesting_user_id());
 
+DROP POLICY IF EXISTS "Authenticated users can view boarding houses" ON public.boarding_houses;
 CREATE POLICY "Authenticated users can view boarding houses"
 ON public.boarding_houses
 FOR SELECT
 USING (true);
 
 -- Rooms Policies (House owners can manage rooms; authenticated users can view)
+DROP POLICY IF EXISTS "House owners can manage rooms" ON public.rooms;
 CREATE POLICY "House owners can manage rooms"
 ON public.rooms
 FOR ALL
@@ -136,12 +140,14 @@ WITH CHECK (
     )
 );
 
+DROP POLICY IF EXISTS "Authenticated users can view rooms" ON public.rooms;
 CREATE POLICY "Authenticated users can view rooms"
 ON public.rooms
 FOR SELECT
 USING (true);
 
 -- Placements Policies (Users can manage placements they coordinate)
+DROP POLICY IF EXISTS "Users can manage own placements" ON public.placements;
 CREATE POLICY "Users can manage own placements"
 ON public.placements
 FOR ALL
