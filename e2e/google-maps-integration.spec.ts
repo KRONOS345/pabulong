@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Pabulong — Google Maps & Spatial Geolocation E2E Tests", () => {
-  test("DISCOVERY FEED: renders map container and markers in Full Map and Split view", async ({
+test.describe("Pabulong — OpenStreetMap, Leaflet & Spatial Geolocation E2E Tests", () => {
+  test("DISCOVERY FEED: renders map container and markers in Full Map and Split view with OSM engine", async ({
     page,
   }) => {
     await page.goto("/");
@@ -21,6 +21,23 @@ test.describe("Pabulong — Google Maps & Spatial Geolocation E2E Tests", () => 
     // Header badge indicates spatial coordinates in EPSG:4326 / Butuan
     await expect(page.locator("text=PostGIS Spatial View")).toBeVisible();
     await expect(page.locator("text=EPSG:4326")).toBeVisible();
+
+    // OSM Leaflet container should be active by default
+    const osmView = page.locator("[data-testid='osm-map-view']");
+    await expect(osmView).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=OpenStreetMap").first()).toBeVisible();
+
+    // Toggle to Radar and back to OSM
+    const radarBtn = page.getByRole("button", { name: "Radar" });
+    await expect(radarBtn).toBeVisible();
+    await radarBtn.click();
+
+    // Radar distance rings are now visible
+    await expect(page.locator("text=150m")).toBeVisible();
+
+    const osmBtn = page.getByRole("button", { name: "OSM" });
+    await expect(osmBtn).toBeVisible();
+    await osmBtn.click();
 
     // Property markers with PHP rent badges exist
     const pins = page.locator("[role='button'][aria-label*='View']");
@@ -51,7 +68,7 @@ test.describe("Pabulong — Google Maps & Spatial Geolocation E2E Tests", () => 
     // Campus proximity badge
     await expect(page.locator("text=to FSUU Main")).toBeVisible();
 
-    // Directions CTA button linking to Google Maps with exact destination coordinates
+    // Directions CTA button linking to external walking directions
     const directionsBtn = page.getByRole("link", { name: "Get Directions" });
     await expect(directionsBtn).toBeVisible();
     const href = await directionsBtn.getAttribute("href");
@@ -66,7 +83,7 @@ test.describe("Pabulong — Google Maps & Spatial Geolocation E2E Tests", () => 
     await expect(page.locator("text=GPS: 8.9482° N, 125.5432° E")).toBeVisible();
   });
 
-  test("OWNER FORM: location picker allows adjusting coordinates with barangay snap helper", async ({
+  test("OWNER FORM: location picker allows adjusting coordinates, snapping to barangay, and Nominatim lookup", async ({
     page,
   }) => {
     // Enable dev mocks to access owner portal without real Clerk login
@@ -101,5 +118,73 @@ test.describe("Pabulong — Google Maps & Spatial Geolocation E2E Tests", () => 
 
     // Campus proximity indicator
     await expect(page.locator("text=Pin is approximately")).toBeVisible();
+
+    // Nominatim Reverse Geocoding button
+    const lookupBtn = page.getByRole("button", { name: "Lookup Address (OSM)" });
+    await expect(lookupBtn).toBeVisible();
+
+    // Intercept Nominatim request to test graceful handling and compliance
+    await page.route("**/nominatim.openstreetmap.org/reverse*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          display_name: "Montilla Boulevard, Barangay Dagohoy, Butuan City, Agusan del Norte, 8600, Philippines",
+          address: {
+            road: "Montilla Boulevard",
+            suburb: "Dagohoy",
+            city: "Butuan City",
+            postcode: "8600",
+          },
+        }),
+      });
+    });
+
+    await lookupBtn.click();
+
+    // Verified address suggestion appears
+    await expect(page.locator("text=OpenStreetMap Address Suggestion")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=Montilla Boulevard")).toBeVisible();
+    await expect(page.locator("text=Data © OpenStreetMap contributors")).toBeVisible();
+
+    // Click Use Address to apply suggestion without losing original coordinates
+    const useBtn = page.getByRole("button", { name: "Use Address" });
+    await expect(useBtn).toBeVisible();
+    await useBtn.click();
+    await expect(page.locator("text=Applied")).toBeVisible();
+  });
+
+  test("GEOCODING RESILIENCE: handles Nominatim network failure gracefully without clearing coordinates", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("pabulong_dev_mock_role", "owner");
+    });
+
+    await page.goto("/owner/properties/new");
+    await page.waitForLoadState("domcontentloaded");
+
+    const snapBtn = page.getByRole("button", { name: /Snap to .* Center/ });
+    await snapBtn.click();
+
+    const latInput = page.locator("#prop-lat");
+    const initialLat = await latInput.inputValue();
+
+    // Simulate 503 / 429 rate-limited response from public Nominatim
+    await page.route("**/nominatim.openstreetmap.org/reverse*", async (route) => {
+      await route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Too Many Requests" }),
+      });
+    });
+
+    const lookupBtn = page.getByRole("button", { name: "Lookup Address (OSM)" });
+    await lookupBtn.click();
+
+    // Coordinates remain intact and error is displayed non-destructively
+    const currentLat = await latInput.inputValue();
+    expect(currentLat).toBe(initialLat);
+    await expect(page.locator("text=Coordinates remain saved")).toBeVisible({ timeout: 5000 });
   });
 });

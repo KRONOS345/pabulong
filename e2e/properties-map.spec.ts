@@ -18,6 +18,12 @@ test.describe("Properties & PostGIS Spatial Map E2E", () => {
     await mapContainer.scrollIntoViewIfNeeded();
     await expect(mapContainer).toBeVisible();
 
+    // Toggle to Radar view if currently in OpenStreetMap view
+    const radarBtn = page.getByRole("button", { name: "Radar" });
+    if (await radarBtn.isVisible()) {
+      await radarBtn.click();
+    }
+
     const svgRadar = page.locator("svg[viewBox='0 0 100 100']");
     await expect(svgRadar).toBeVisible();
 

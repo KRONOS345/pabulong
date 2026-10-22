@@ -18,11 +18,12 @@ import { Button } from "@/components/ui/button";
 import type { BoardingHouseItem } from "@/lib/property-types";
 import type { BoardingHouse } from "@/lib/marketplace-types";
 import { GoogleMapView } from "@/components/properties/google-map-view";
+import { OsmMapView } from "@/components/properties/osm-map-view";
 import {
   isValidCoordinate,
   BUTUAN_DEFAULT_CENTER,
   getGoogleMapsApiKey,
-} from "@/lib/google-maps";
+} from "@/lib/osm-maps";
 
 export { isValidCoordinate, BUTUAN_DEFAULT_CENTER };
 
@@ -64,7 +65,7 @@ interface InteractiveMapProps {
     name?: string;
   };
   className?: string;
-  preferredEngine?: "google" | "radar";
+  preferredEngine?: "osm" | "radar" | "google";
 }
 
 export function InteractiveMap({
@@ -80,10 +81,10 @@ export function InteractiveMap({
   const apiKey = getGoogleMapsApiKey();
   const hasKey = Boolean(apiKey);
 
-  // Engine selection: defaults to Google Maps if key is available, or PostGIS radar
-  const [engine, setEngine] = React.useState<"google" | "radar">(() => {
+  // Engine selection: defaults to cost-conscious OpenStreetMap, with PostGIS radar toggle
+  const [engine, setEngine] = React.useState<"osm" | "radar" | "google">(() => {
     if (preferredEngine) return preferredEngine;
-    return hasKey ? "google" : "radar";
+    return "osm";
   });
 
   const [zoomLevel, setZoomLevel] = React.useState<number>(1);
@@ -207,39 +208,52 @@ export function InteractiveMap({
 
         {/* Engine Switcher & Zoom Controls */}
         <div className="pointer-events-auto flex items-center gap-2">
-          {/* Map Engine Toggle: Google Maps vs PostGIS Radar */}
-          {hasKey && (
-            <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-lg backdrop-blur-md">
+          {/* Map Engine Toggle: OpenStreetMap vs PostGIS Radar */}
+          <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-lg backdrop-blur-md">
+            <Button
+              variant={engine === "osm" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setEngine("osm")}
+              className={`h-7 px-2.5 text-xs font-medium rounded-lg ${
+                engine === "osm"
+                  ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Switch to OpenStreetMap"
+            >
+              <Globe className="h-3.5 w-3.5 mr-1" />
+              OSM
+            </Button>
+            <Button
+              variant={engine === "radar" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setEngine("radar")}
+              className={`h-7 px-2.5 text-xs font-medium rounded-lg ${
+                engine === "radar"
+                  ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Switch to PostGIS Radar"
+            >
+              <Radio className="h-3.5 w-3.5 mr-1" />
+              Radar
+            </Button>
+            {hasKey && (
               <Button
                 variant={engine === "google" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setEngine("google")}
-                className={`h-7 px-2.5 text-xs font-medium rounded-lg ${
+                className={`h-7 px-2 text-xs font-medium rounded-lg ${
                   engine === "google"
-                    ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                    ? "bg-amber-600 text-white hover:bg-amber-500"
                     : "text-slate-400 hover:text-white"
                 }`}
                 title="Switch to Google Maps"
               >
-                <Globe className="h-3.5 w-3.5 mr-1" />
                 Google
               </Button>
-              <Button
-                variant={engine === "radar" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setEngine("radar")}
-                className={`h-7 px-2.5 text-xs font-medium rounded-lg ${
-                  engine === "radar"
-                    ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                    : "text-slate-400 hover:text-white"
-                }`}
-                title="Switch to PostGIS Radar"
-              >
-                <Radio className="h-3.5 w-3.5 mr-1" />
-                Radar
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Radar Zoom Controls (only shown in radar mode) */}
           {engine === "radar" && (
@@ -277,7 +291,17 @@ export function InteractiveMap({
       </div>
 
       {/* Render Active Engine */}
-      {engine === "google" && hasKey ? (
+      {engine === "osm" ? (
+        <OsmMapView
+          properties={properties}
+          selectedPropertyId={selectedPropertyId}
+          hoveredPropertyId={hoveredPropertyId}
+          onSelectProperty={handleSelect}
+          center={center}
+          className="h-full border-0 rounded-none"
+          onFallbackRequest={() => setEngine("radar")}
+        />
+      ) : engine === "google" && hasKey ? (
         <GoogleMapView
           properties={properties}
           selectedPropertyId={selectedPropertyId}

@@ -257,6 +257,14 @@ export function PropertyForm({ initialData, isEdit = false }: PropertyFormProps)
               setLatitude(lat);
               setLongitude(lng);
             }}
+            onAddressSuggested={({ road, barangay: suggestedBarangay }) => {
+              if (suggestedBarangay && BUTUAN_BARANGAYS.includes(suggestedBarangay)) {
+                setBarangay(suggestedBarangay);
+              }
+              if (road && (!address || address.trim() === "")) {
+                setAddress(road);
+              }
+            }}
           />
 
           <div className="space-y-2">

@@ -123,15 +123,24 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
     }
     await expect(mapBtn).toBeVisible();
 
-    // 2. Switch to Full Map view
+    // 2. Switch to Full Map view — default engine is OpenStreetMap (Leaflet)
     await mapBtn.click();
     await expect(page.locator("text=PostGIS Spatial View")).toBeVisible();
-    await expect(page.locator("text=University Campus Gate")).toBeVisible();
 
-    // Verify distance rings exist
+    // OSM Leaflet map is the default; verify the OSM map container is present
+    await expect(page.locator("[data-testid='osm-map-view']")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=OpenStreetMap").first()).toBeVisible();
+
+    // Switch to Radar (SVG) view and verify campus gate + distance rings
+    const radarToggle = page.getByRole("button", { name: "Radar" });
+    await expect(radarToggle).toBeVisible();
+    await radarToggle.click();
+    await expect(page.locator("text=University Campus Gate")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("text=150m")).toBeVisible();
 
-    // Verify map pins with PHP peso tags exist
+    // Switch back to OSM view and verify map pins with PHP peso tags
+    const osmToggle = page.getByRole("button", { name: "OSM" });
+    await osmToggle.click();
     const pins = page.locator("[role='button'][aria-label*='View']");
     await expect(pins.first()).toBeVisible({ timeout: 10000 });
 

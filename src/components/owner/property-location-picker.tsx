@@ -5,6 +5,10 @@ import {
   MapPin,
   Crosshair,
   GraduationCap,
+  Sparkles,
+  Loader2,
+  Check,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +18,9 @@ import {
   BUTUAN_DEFAULT_CENTER,
   findNearestCampus,
   BUTUAN_BARANGAY_COORDS,
-} from "@/lib/google-maps";
+  reverseGeocodeCoordinate,
+  type ReverseGeocodeResult,
+} from "@/lib/osm-maps";
 
 export { BUTUAN_BARANGAY_COORDS };
 
@@ -23,6 +29,7 @@ interface PropertyLocationPickerProps {
   longitude?: number | null;
   barangay?: string;
   onChange: (coords: { latitude: number; longitude: number }) => void;
+  onAddressSuggested?: (suggested: { road?: string; barangay?: string; fullAddress?: string }) => void;
   className?: string;
 }
 
@@ -31,9 +38,15 @@ export function PropertyLocationPicker({
   longitude,
   barangay = "Libertad",
   onChange,
+  onAddressSuggested,
   className = "",
 }: PropertyLocationPickerProps) {
   const mapRef = React.useRef<HTMLDivElement | null>(null);
+
+  const [isGeocoding, setIsGeocoding] = React.useState(false);
+  const [geocodeResult, setGeocodeResult] = React.useState<ReverseGeocodeResult | null>(null);
+  const [geocodeError, setGeocodeError] = React.useState<string | null>(null);
+  const [addressApplied, setAddressApplied] = React.useState(false);
 
   const hasCoords = isValidCoordinate(latitude, longitude);
 
@@ -52,6 +65,9 @@ export function PropertyLocationPicker({
   const handleSnapToBarangay = () => {
     const coords = BUTUAN_BARANGAY_COORDS[barangay] || BUTUAN_DEFAULT_CENTER;
     onChange({ latitude: coords.lat, longitude: coords.lng });
+    setGeocodeResult(null);
+    setGeocodeError(null);
+    setAddressApplied(false);
   };
 
   // Convert click on interactive SVG radar into lat/lng delta
@@ -71,6 +87,42 @@ export function PropertyLocationPicker({
       latitude: parseFloat(clickedLat.toFixed(6)),
       longitude: parseFloat(clickedLng.toFixed(6)),
     });
+    setGeocodeResult(null);
+    setGeocodeError(null);
+    setAddressApplied(false);
+  };
+
+  // Explicit, on-demand OpenStreetMap Nominatim reverse geocoding
+  // Complies with Nominatim usage policy: max 1 req/sec, cached, not called during drag
+  const handleLookupAddress = async () => {
+    if (!hasCoords) return;
+
+    setIsGeocoding(true);
+    setGeocodeError(null);
+    setAddressApplied(false);
+
+    try {
+      const result = await reverseGeocodeCoordinate(currentLat, currentLng);
+      if (result) {
+        setGeocodeResult(result);
+      } else {
+        setGeocodeError("OpenStreetMap lookup returned no address or was rate-limited. Coordinates remain saved.");
+      }
+    } catch {
+      setGeocodeError("OpenStreetMap lookup is temporarily busy or rate-limited. Coordinates remain saved.");
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleApplyAddress = () => {
+    if (!geocodeResult) return;
+    onAddressSuggested?.({
+      road: geocodeResult.road,
+      barangay: geocodeResult.barangay,
+      fullAddress: geocodeResult.displayName,
+    });
+    setAddressApplied(true);
   };
 
   // Compute marker percentage on visual box
@@ -95,16 +147,36 @@ export function PropertyLocationPicker({
           </p>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleSnapToBarangay}
-          className="text-xs h-8 rounded-lg shrink-0 gap-1.5"
-        >
-          <Crosshair className="h-3.5 w-3.5 text-primary" />
-          <span>Snap to {barangay} Center</span>
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleSnapToBarangay}
+            className="text-xs h-8 rounded-lg shrink-0 gap-1.5"
+          >
+            <Crosshair className="h-3.5 w-3.5 text-primary" />
+            <span>Snap to {barangay} Center</span>
+          </Button>
+
+          {hasCoords && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={isGeocoding}
+              onClick={handleLookupAddress}
+              className="text-xs h-8 rounded-lg shrink-0 gap-1.5 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20"
+            >
+              {isGeocoding ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              <span>Lookup Address (OSM)</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Visual Clickable Map Picker Canvas */}
@@ -162,6 +234,55 @@ export function PropertyLocationPicker({
           </span>
         </div>
       </div>
+
+      {/* Suggested Reverse Geocoding Card */}
+      {geocodeResult && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 space-y-2 text-xs">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span>OpenStreetMap Address Suggestion</span>
+              </div>
+              <p className="text-muted-foreground leading-relaxed">
+                {geocodeResult.road ? `Road: ${geocodeResult.road} • ` : ""}
+                {geocodeResult.barangay ? `Barangay: ${geocodeResult.barangay} • ` : ""}
+                {geocodeResult.city || "Butuan City"}
+              </p>
+            </div>
+
+            {onAddressSuggested && (
+              <Button
+                type="button"
+                size="sm"
+                variant={addressApplied ? "outline" : "default"}
+                onClick={handleApplyAddress}
+                className="text-xs h-7 gap-1 shrink-0"
+              >
+                {addressApplied ? (
+                  <>
+                    <Check className="h-3 w-3 text-emerald-500" />
+                    <span>Applied</span>
+                  </>
+                ) : (
+                  <span>Use Address</span>
+                )}
+              </Button>
+            )}
+          </div>
+          <div className="text-[10px] text-muted-foreground/80 border-t border-primary/10 pt-1.5 flex items-center justify-between">
+            <span>Data © OpenStreetMap contributors, ODbL 1.0 (Nominatim)</span>
+            <span className="font-mono text-[10px]">1 req/sec policy compliant</span>
+          </div>
+        </div>
+      )}
+
+      {geocodeError && (
+        <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{geocodeError}</span>
+        </div>
+      )}
 
       {/* Coordinate Input Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

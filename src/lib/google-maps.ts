@@ -97,7 +97,14 @@ export function isValidCoordinate(lat?: number | null, lng?: number | null): boo
  */
 export function getGoogleMapsApiKey(): string | null {
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!key || key.trim() === "" || key.includes("YOUR_") || key.includes("placeholder")) {
+  if (
+    !key ||
+    key.trim() === "" ||
+    key === "undefined" ||
+    key === "null" ||
+    key.includes("YOUR_") ||
+    key.includes("placeholder")
+  ) {
     return null;
   }
   return key.trim();
@@ -254,3 +261,10 @@ export function useGoogleMaps() {
     google: typeof window !== "undefined" ? window.google : undefined,
   };
 }
+
+// Re-export OpenStreetMap & Nominatim Geocoding Utilities
+export {
+  OSM_TILE_CONFIG,
+  reverseGeocodeCoordinate,
+  type ReverseGeocodeResult,
+} from "@/lib/osm-maps";
