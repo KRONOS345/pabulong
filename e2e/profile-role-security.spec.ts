@@ -48,6 +48,8 @@ if (fs.existsSync(envPath)) {
  *      (`request.jwt.claim.sub`, `request.jwt.claim.role`).
  */
 test.describe("Pabulong Security — Profile Role Escalation & Onboarding Tests", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("SERVER ACTION (MOCKED AUTH): rejects unauthenticated profile sync requests when dev mocks disabled", async () => {
     // When dev mocks are disabled, unauthenticated calls fail immediately at auth boundary
     process.env.ENABLE_DEV_MOCKS = "false";
@@ -111,17 +113,29 @@ test.describe("Pabulong Security — Profile Role Escalation & Onboarding Tests"
       return;
     }
 
-    // Direct REST attempt by unauthorized client to promote a profile to admin
-    const res = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.user_seeker_demo`, {
-      method: "PATCH",
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify({ role: "admin" }),
-    });
+    // Direct REST attempt by unauthorized client to promote a profile to admin with retry resilience
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        res = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.user_seeker_demo`, {
+          method: "PATCH",
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify({ role: "admin" }),
+        });
+        break;
+      } catch (err) {
+        if (attempt === 2) throw err;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    expect(res).not.toBeNull();
+    if (!res) return;
 
     // Unauthenticated/anon client must receive 0 updated rows due to RLS
     if (res.ok) {

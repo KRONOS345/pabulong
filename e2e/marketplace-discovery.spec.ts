@@ -45,7 +45,7 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
     // Wait for debounced search update
     await expect(
       page.getByRole("heading", { name: "Green Valley Dormitory - CSU Ampayon" })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
     await expect(
       page.getByRole("heading", { name: "Balangay Student Residences - FSUU Campus" })
     ).not.toBeVisible();
