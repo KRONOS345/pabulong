@@ -71,6 +71,8 @@ export function OsmMapView({
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
     let isMounted = true;
+    let animFrameId: number | null = null;
+    let resizeObserver: ResizeObserver | null = null;
 
     async function initMap() {
       const L = await import("leaflet");
@@ -135,13 +137,37 @@ export function OsmMapView({
         mapInstanceRef.current = map;
 
         setIsClientReady(true);
+
+        // Ensure Leaflet recalculates bounds once initial layout renders
+        animFrameId = requestAnimationFrame(() => {
+          if (isMounted && mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        });
       }
     }
 
     initMap();
 
+    // Observe container size adjustments (e.g. view transitions or layout resize)
+    const container = mapContainerRef.current;
+    if (typeof ResizeObserver !== "undefined" && container) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      });
+      resizeObserver.observe(container);
+    }
+
     return () => {
       isMounted = false;
+      if (animFrameId !== null) {
+        cancelAnimationFrame(animFrameId);
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
