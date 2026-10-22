@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { createPropertyAction, updatePropertyAction } from "@/actions/marketplace";
 import type { BoardingHouse, GenderRestriction } from "@/lib/marketplace-types";
+import { PropertyLocationPicker } from "@/components/owner/property-location-picker";
 
 const BUTUAN_BARANGAYS = [
   "Libertad",
@@ -80,6 +81,8 @@ export function PropertyForm({ initialData, isEdit = false }: PropertyFormProps)
   const [contactPhone, setContactPhone] = React.useState(initialData?.contact_phone || "");
   const [contactEmail, setContactEmail] = React.useState(initialData?.contact_email || "");
   const [coverImageUrl, setCoverImageUrl] = React.useState(initialData?.cover_image_url || "");
+  const [latitude, setLatitude] = React.useState<number | undefined>(initialData?.latitude ?? undefined);
+  const [longitude, setLongitude] = React.useState<number | undefined>(initialData?.longitude ?? undefined);
 
   const [selectedAmenities, setSelectedAmenities] = React.useState<string[]>(
     initialData?.amenities || ["High-Speed Wi-Fi", "CCTV Security 24/7"]
@@ -133,6 +136,8 @@ export function PropertyForm({ initialData, isEdit = false }: PropertyFormProps)
           cover_image_url: coverImageUrl.trim() || undefined,
           amenities: selectedAmenities,
           rules: selectedRules,
+          latitude,
+          longitude,
         });
 
         if (!res.success) {
@@ -160,6 +165,8 @@ export function PropertyForm({ initialData, isEdit = false }: PropertyFormProps)
             "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80",
           amenities: selectedAmenities,
           rules: selectedRules,
+          latitude,
+          longitude,
         });
 
         if (!res.success || !res.property) {
@@ -240,6 +247,17 @@ export function PropertyForm({ initialData, isEdit = false }: PropertyFormProps)
               className="bg-background"
             />
           </div>
+
+          {/* Interactive Map Location Picker */}
+          <PropertyLocationPicker
+            latitude={latitude}
+            longitude={longitude}
+            barangay={barangay}
+            onChange={({ latitude: lat, longitude: lng }) => {
+              setLatitude(lat);
+              setLongitude(lng);
+            }}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="description" className="text-xs font-semibold">

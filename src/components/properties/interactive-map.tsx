@@ -10,11 +10,21 @@ import {
   RotateCcw,
   ExternalLink,
   X,
+  Globe,
+  Radio,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BoardingHouseItem } from "@/lib/property-types";
 import type { BoardingHouse } from "@/lib/marketplace-types";
+import { GoogleMapView } from "@/components/properties/google-map-view";
+import {
+  isValidCoordinate,
+  BUTUAN_DEFAULT_CENTER,
+  getGoogleMapsApiKey,
+} from "@/lib/google-maps";
+
+export { isValidCoordinate, BUTUAN_DEFAULT_CENTER };
 
 export interface MapListingItem {
   id: string;
@@ -54,27 +64,7 @@ interface InteractiveMapProps {
     name?: string;
   };
   className?: string;
-}
-
-// Center Reference: Butuan City Center / FSUU Campus Gate
-export const BUTUAN_DEFAULT_CENTER = {
-  lat: 8.9482,
-  lng: 125.5432,
-  name: "University Campus Gate",
-};
-
-/**
- * Validates that latitude and longitude are valid finite geographic coordinates.
- * Excludes NaN, infinite, null, undefined, out-of-range, and Null Island (0,0).
- */
-export function isValidCoordinate(lat?: number | null, lng?: number | null): boolean {
-  if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
-  if (typeof lat !== "number" || typeof lng !== "number") return false;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
-  // Exclude 0,0 (Null Island) unless explicitly intended
-  if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) return false;
-  return true;
+  preferredEngine?: "google" | "radar";
 }
 
 export function InteractiveMap({
@@ -85,7 +75,17 @@ export function InteractiveMap({
   onHoverProperty,
   center,
   className = "",
+  preferredEngine,
 }: InteractiveMapProps) {
+  const apiKey = getGoogleMapsApiKey();
+  const hasKey = Boolean(apiKey);
+
+  // Engine selection: defaults to Google Maps if key is available, or PostGIS radar
+  const [engine, setEngine] = React.useState<"google" | "radar">(() => {
+    if (preferredEngine) return preferredEngine;
+    return hasKey ? "google" : "radar";
+  });
+
   const [zoomLevel, setZoomLevel] = React.useState<number>(1);
   const [dismissedPropertyId, setDismissedPropertyId] = React.useState<string | null>(null);
 
@@ -205,220 +205,244 @@ export function InteractiveMap({
           </span>
         </div>
 
-        <div className="pointer-events-auto flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-lg backdrop-blur-md">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoomLevel((z) => Math.min(z + 0.2, 1.6))}
-            aria-label="Zoom in"
-            className="h-7 w-7 p-0 text-slate-400 hover:text-white"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoomLevel((z) => Math.max(z - 0.2, 0.7))}
-            aria-label="Zoom out"
-            className="h-7 w-7 p-0 text-slate-400 hover:text-white"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoomLevel(1)}
-            aria-label="Reset zoom"
-            className="h-7 w-7 p-0 text-slate-400 hover:text-white"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </Button>
+        {/* Engine Switcher & Zoom Controls */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          {/* Map Engine Toggle: Google Maps vs PostGIS Radar */}
+          {hasKey && (
+            <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-lg backdrop-blur-md">
+              <Button
+                variant={engine === "google" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setEngine("google")}
+                className={`h-7 px-2.5 text-xs font-medium rounded-lg ${
+                  engine === "google"
+                    ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Switch to Google Maps"
+              >
+                <Globe className="h-3.5 w-3.5 mr-1" />
+                Google
+              </Button>
+              <Button
+                variant={engine === "radar" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setEngine("radar")}
+                className={`h-7 px-2.5 text-xs font-medium rounded-lg ${
+                  engine === "radar"
+                    ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Switch to PostGIS Radar"
+              >
+                <Radio className="h-3.5 w-3.5 mr-1" />
+                Radar
+              </Button>
+            </div>
+          )}
+
+          {/* Radar Zoom Controls (only shown in radar mode) */}
+          {engine === "radar" && (
+            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-lg backdrop-blur-md">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setZoomLevel((z) => Math.min(z + 0.2, 1.6))}
+                aria-label="Zoom in"
+                className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setZoomLevel((z) => Math.max(z - 0.2, 0.7))}
+                aria-label="Zoom out"
+                className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setZoomLevel(1)}
+                aria-label="Reset zoom"
+                className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* SVG Geospatial Radar Grid */}
-      <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-        <svg
-          className="w-full h-full absolute inset-0 select-none transition-transform duration-300 pointer-events-none"
-          style={{ transform: `scale(${zoomLevel})` }}
-          viewBox="0 0 100 100"
-          role="img"
-          aria-label="Geospatial boarding house radar map"
-        >
-          <defs>
-            <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgba(99, 102, 241, 0.16)" />
-              <stop offset="60%" stopColor="rgba(99, 102, 241, 0.03)" />
-              <stop offset="100%" stopColor="rgba(3, 7, 18, 0)" />
-            </radialGradient>
-            <pattern id="geoGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path
-                d="M 10 0 L 0 0 0 10"
-                fill="none"
-                stroke="rgba(51, 65, 85, 0.25)"
-                strokeWidth="0.3"
-              />
-            </pattern>
-          </defs>
-
-          {/* Background Grid */}
-          <rect width="100" height="100" fill="url(#geoGrid)" />
-          <circle cx="50" cy="50" r="48" fill="url(#radarGlow)" />
-
-          {/* PostGIS Radius Distance Rings (150m, 300m, 450m) */}
-          <circle
-            cx="50"
-            cy="50"
-            r="16"
-            fill="none"
-            stroke="rgba(99, 102, 241, 0.25)"
-            strokeWidth="0.4"
-            strokeDasharray="1.5 1.5"
-          />
-          <text
-            x="51"
-            y="34.5"
-            fill="rgba(148, 163, 184, 0.55)"
-            fontSize="2"
-            fontFamily="monospace"
+      {/* Render Active Engine */}
+      {engine === "google" && hasKey ? (
+        <GoogleMapView
+          properties={properties}
+          selectedPropertyId={selectedPropertyId}
+          hoveredPropertyId={hoveredPropertyId}
+          onSelectProperty={handleSelect}
+          center={center}
+          className="h-full border-0 rounded-none"
+          onFallbackRequest={() => setEngine("radar")}
+        />
+      ) : (
+        /* SVG Geospatial Radar Grid (PostGIS Spatial View) */
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+          <svg
+            className="w-full h-full absolute inset-0 select-none transition-transform duration-300 pointer-events-none"
+            style={{ transform: `scale(${zoomLevel})` }}
+            viewBox="0 0 100 100"
+            role="img"
+            aria-label="Geospatial boarding house radar map"
           >
-            150m
-          </text>
+            <defs>
+              <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(99, 102, 241, 0.16)" />
+                <stop offset="60%" stopColor="rgba(99, 102, 241, 0.03)" />
+                <stop offset="100%" stopColor="rgba(3, 7, 18, 0)" />
+              </radialGradient>
+              <pattern id="geoGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 10 0 L 0 0 0 10"
+                  fill="none"
+                  stroke="rgba(51, 65, 85, 0.25)"
+                  strokeWidth="0.3"
+                />
+              </pattern>
+            </defs>
 
-          <circle
-            cx="50"
-            cy="50"
-            r="30"
-            fill="none"
-            stroke="rgba(99, 102, 241, 0.2)"
-            strokeWidth="0.4"
-            strokeDasharray="2 2"
-          />
-          <text
-            x="51"
-            y="20.5"
-            fill="rgba(148, 163, 184, 0.5)"
-            fontSize="2"
-            fontFamily="monospace"
-          >
-            300m
-          </text>
+            {/* Background Grid and Radial Gradient */}
+            <rect width="100" height="100" fill="url(#geoGrid)" />
+            <rect width="100" height="100" fill="url(#radarGlow)" />
 
-          <circle
-            cx="50"
-            cy="50"
-            r="44"
-            fill="none"
-            stroke="rgba(99, 102, 241, 0.15)"
-            strokeWidth="0.4"
-            strokeDasharray="2.5 2.5"
-          />
-          <text
-            x="51"
-            y="6.5"
-            fill="rgba(148, 163, 184, 0.45)"
-            fontSize="2"
-            fontFamily="monospace"
-          >
-            450m radius
-          </text>
+            {/* Crosshairs & Axis Grid */}
+            <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(51, 65, 85, 0.5)" strokeWidth="0.4" strokeDasharray="1 1" />
+            <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(51, 65, 85, 0.5)" strokeWidth="0.4" strokeDasharray="1 1" />
 
-          {/* Central Campus Gate Beacon */}
-          <circle cx="50" cy="50" r="1.8" fill="#6366f1" className="animate-ping" opacity="0.4" />
-          <circle cx="50" cy="50" r="1.4" fill="#a855f7" />
-          <circle cx="50" cy="50" r="0.6" fill="#ffffff" />
-          <text
-            x="50"
-            y="54"
-            textAnchor="middle"
-            fill="#e2e8f0"
-            fontSize="2.2"
-            fontWeight="bold"
-          >
-            University Campus Gate
-          </text>
+            {/* Concentric Distance Rings (PostGIS ST_DWithin visualization) */}
+            <circle cx="50" cy="50" r="14" fill="none" stroke="rgba(52, 211, 153, 0.35)" strokeWidth="0.4" strokeDasharray="1.5 1.5" />
+            <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(99, 102, 241, 0.3)" strokeWidth="0.4" strokeDasharray="2 2" />
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(148, 163, 184, 0.2)" strokeWidth="0.4" strokeDasharray="3 3" />
 
-          {/* Property Radius Connections */}
-          {validProperties.map((prop) => {
-            const { x, y } = getCoordinates(prop.latitude, prop.longitude);
-            const isHovered = hoveredPropertyId === prop.id;
-            const isSelected = selectedPropertyId === prop.id;
+            {/* Distance Ring Metric Labels */}
+            <text x="51" y="36.5" fill="rgba(52, 211, 153, 0.7)" fontSize="2.2" fontFamily="monospace" fontWeight="600">
+              150m
+            </text>
+            <text x="51" y="22.5" fill="rgba(99, 102, 241, 0.7)" fontSize="2.2" fontFamily="monospace" fontWeight="600">
+              450m
+            </text>
+            <text x="51" y="8.5" fill="rgba(148, 163, 184, 0.6)" fontSize="2.2" fontFamily="monospace" fontWeight="600">
+              900m
+            </text>
 
-            return (
-              <g key={`line-${prop.id}`}>
-                {(isHovered || isSelected) && (
+            {/* Center Reference Marker (Campus Gate) */}
+            <g>
+              <circle cx="50" cy="50" r="2.2" fill="#4f46e5" stroke="#ffffff" strokeWidth="0.6" />
+              <circle cx="50" cy="50" r="4" fill="none" stroke="#6366f1" strokeWidth="0.4" className="animate-ping" style={{ transformOrigin: "50% 50%" }} />
+              <text x="50" y="55.5" fill="#a5b4fc" fontSize="2.4" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">
+                {effectiveCenter.name}
+              </text>
+            </g>
+
+            {/* Geodesic Range Vector lines from Center to Mapped Properties */}
+            {validProperties.map((p) => {
+              const { x, y } = getCoordinates(p.latitude, p.longitude);
+              const isSelected = selectedPropertyId === p.id;
+              const isHovered = hoveredPropertyId === p.id;
+
+              return (
+                <g key={`vector-${p.id}`}>
                   <line
                     x1="50"
                     y1="50"
                     x2={x}
                     y2={y}
-                    stroke="rgba(168, 85, 247, 0.7)"
-                    strokeWidth="0.6"
-                    strokeDasharray="1 1"
+                    stroke={
+                      isSelected
+                        ? "rgba(52, 211, 153, 0.9)"
+                        : isHovered
+                        ? "rgba(99, 102, 241, 0.8)"
+                        : "rgba(51, 65, 85, 0.35)"
+                    }
+                    strokeWidth={isSelected || isHovered ? "0.7" : "0.3"}
+                    strokeDasharray={isSelected || isHovered ? "none" : "1 1"}
                   />
+                  {(isSelected || isHovered) && (
+                    <line
+                      x1="50"
+                      y1="50"
+                      x2={x}
+                      y2={y}
+                      stroke="rgba(168, 85, 247, 0.7)"
+                      strokeWidth="0.6"
+                      strokeDasharray="1 1"
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* DOM-based Markers for Interactive Tooltips & Click Handlers */}
+          {validProperties.map((property) => {
+            const { x, y } = getCoordinates(property.latitude, property.longitude);
+            const isSelected = selectedPropertyId === property.id;
+            const isHovered = hoveredPropertyId === property.id;
+            const availableUnits =
+              property.rooms?.filter((r) => r.status === "available").length ?? 0;
+            const minRent = getStartingRent(property);
+
+            return (
+              <div
+                key={property.id}
+                style={{
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+                className="absolute z-10 cursor-pointer transition-all duration-200 select-none"
+                onMouseEnter={() => onHoverProperty?.(property.id)}
+                onMouseLeave={() => onHoverProperty?.(null)}
+                onClick={() => handleSelect(property.id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${property.name} on map, ₱${minRent.toLocaleString()}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(property.id);
+                  }
+                }}
+              >
+                {/* Outer Pulsing Beacon when Active */}
+                {(isSelected || isHovered) && (
+                  <div className="absolute -inset-2.5 rounded-full bg-emerald-500/30 animate-ping pointer-events-none" />
                 )}
-              </g>
+
+                {/* Pin Pill Marker with min 44px touch target */}
+                <div
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-xl border transition-all ${
+                    isSelected || isHovered
+                      ? "bg-emerald-600 border-emerald-300 text-white scale-110 shadow-emerald-500/50 ring-2 ring-emerald-400/40"
+                      : "bg-slate-900/95 border-slate-700/80 text-slate-200 hover:border-slate-500 hover:scale-105"
+                  }`}
+                >
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      availableUnits > 0 ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                    }`}
+                  />
+                  <span className="font-mono text-[11px]">₱{minRent.toLocaleString()}</span>
+                </div>
+              </div>
             );
           })}
-        </svg>
+        </div>
+      )}
 
-        {/* DOM-based Markers for Interactive Tooltips & Click Handlers */}
-        {validProperties.map((property) => {
-          const { x, y } = getCoordinates(property.latitude, property.longitude);
-          const isSelected = selectedPropertyId === property.id;
-          const isHovered = hoveredPropertyId === property.id;
-          const availableUnits =
-            property.rooms?.filter((r) => r.status === "available").length ?? 0;
-          const minRent = getStartingRent(property);
-
-          return (
-            <div
-              key={property.id}
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                transform: "translate(-50%, -50%)",
-              }}
-              className="absolute z-10 cursor-pointer transition-all duration-200 select-none"
-              onMouseEnter={() => onHoverProperty?.(property.id)}
-              onMouseLeave={() => onHoverProperty?.(null)}
-              onClick={() => handleSelect(property.id)}
-              role="button"
-              tabIndex={0}
-              aria-label={`View ${property.name} on map, ₱${minRent.toLocaleString()}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleSelect(property.id);
-                }
-              }}
-            >
-              {/* Outer Pulsing Beacon when Active */}
-              {(isSelected || isHovered) && (
-                <div className="absolute -inset-2.5 rounded-full bg-emerald-500/30 animate-ping pointer-events-none" />
-              )}
-
-              {/* Pin Pill Marker with min 44px touch target */}
-              <div
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-xl border transition-all ${
-                  isSelected || isHovered
-                    ? "bg-emerald-600 border-emerald-300 text-white scale-110 shadow-emerald-500/50 ring-2 ring-emerald-400/40"
-                    : "bg-slate-900/95 border-slate-700/80 text-slate-200 hover:border-slate-500 hover:scale-105"
-                }`}
-              >
-                <div
-                  className={`h-2 w-2 rounded-full ${
-                    availableUnits > 0 ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-                  }`}
-                />
-                <span className="font-mono text-[11px]">₱{minRent.toLocaleString()}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Selected Property Popup Drawer / Card Overlay */}
+      {/* Selected Property Popup Drawer / Card Overlay (Active in both modes) */}
       {activeProperty && (() => {
         const rawActive = activeProperty as Partial<BoardingHouse & BoardingHouseItem>;
         return (
@@ -447,67 +471,58 @@ export function InteractiveMap({
                   </p>
                 </div>
 
-              <div className="flex items-start gap-2 shrink-0">
-                <div className="text-right">
-                  <span className="text-[11px] font-mono text-emerald-300 block">
-                    {calculateDistance(activeProperty.latitude, activeProperty.longitude)} from Gate
-                  </span>
-                  <span className="text-xs font-bold text-emerald-400 font-mono">
-                    ₱{getStartingRent(activeProperty).toLocaleString()}/mo min
-                  </span>
+                <div className="flex items-start gap-2 shrink-0">
+                  <div className="text-right">
+                    <div className="text-base font-extrabold text-emerald-400">
+                      ₱{getStartingRent(activeProperty).toLocaleString()}
+                      <span className="text-[10px] font-normal text-slate-400">/mo</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-indigo-400 block">
+                      {calculateDistance(activeProperty.latitude, activeProperty.longitude)} from Gate
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDismissedPropertyId(activeProperty.id)}
+                    className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                    aria-label="Dismiss details"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <button
-                  onClick={() => setDismissedPropertyId(activeProperty.id)}
-                  className="text-slate-400 hover:text-white p-1 rounded-md transition-colors"
-                  aria-label="Close details"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
               </div>
-            </div>
 
-            {/* Room Availability Status and Amenities */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-xs">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-300">
+              {/* Quick Details Chips */}
+              <div className="flex items-center gap-3 text-xs text-slate-300 pt-1 border-t border-slate-800">
+                <span>
                   Available Rooms:{" "}
-                  <strong className="text-emerald-400 font-mono">
+                  <strong className="text-white">
                     {activeProperty.rooms?.filter((r) => r.status === "available").length ?? 0}
                   </strong>
                 </span>
-                <span className="text-slate-500">•</span>
-                <span className="text-slate-400">
-                  Total Units:{" "}
-                  <strong className="text-white">{activeProperty.rooms?.length ?? 0}</strong>
+                <span>•</span>
+                <span>
+                  Rules:{" "}
+                  <strong className="text-slate-300">
+                    {"rules" in activeProperty && Array.isArray((activeProperty as unknown as { rules?: unknown[] }).rules)
+                      ? (activeProperty as unknown as { rules?: unknown[] }).rules?.length ?? 0
+                      : 0}
+                  </strong>
                 </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {activeProperty.amenities && (
-                  <div className="hidden sm:flex items-center gap-1">
-                    {activeProperty.amenities.slice(0, 2).map((a) => (
-                      <span
-                        key={a}
-                        className="text-[10px] bg-slate-900 border border-slate-800 text-slate-300 px-1.5 py-0.5 rounded"
-                      >
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <Link
-                  href={`/properties/${activeProperty.id}`}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 ml-1"
-                >
-                  View Listing
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
+                <span className="ml-auto">
+                  <Link
+                    href={`/properties/${activeProperty.id}`}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:underline"
+                  >
+                    View Listing <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </span>
               </div>
             </div>
           </div>
-        </div>
-      );
-    })()}
+        );
+      })()}
     </div>
   );
 }

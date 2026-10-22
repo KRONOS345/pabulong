@@ -77,9 +77,9 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
 
     // Verify Property Detail Header
     await expect(
-      page.getByRole("heading", { name: "Balangay Student Residences - FSUU Campus" })
+      page.getByRole("heading", { level: 1, name: "Balangay Student Residences - FSUU Campus" })
     ).toBeVisible();
-    await expect(page.getByText("Barangay Dagohoy, Butuan City")).toBeVisible();
+    await expect(page.getByText("Barangay Dagohoy, Butuan City").first()).toBeVisible();
     await expect(page.getByText("Verified Boarding House")).toBeVisible();
 
     // Verify Rooms & Rates Section with Philippine Pesos

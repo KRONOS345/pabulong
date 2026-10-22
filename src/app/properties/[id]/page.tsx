@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { PropertyLocationMap } from "@/components/properties/property-location-map";
 import type { Room } from "@/lib/marketplace-types";
 
 interface PropertyPageProps {
@@ -395,6 +396,9 @@ export default async function PropertyDetailPage({ params }: PropertyPageProps) 
                   </div>
                 )}
               </section>
+
+              {/* Location & Neighborhood Map Section */}
+              <PropertyLocationMap house={house} />
             </div>
 
             {/* Sidebar (Right Col) */}

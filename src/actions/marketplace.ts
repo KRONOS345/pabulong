@@ -20,6 +20,8 @@ import type {
   OwnerMetrics,
 } from "@/lib/marketplace-types";
 
+import { BUTUAN_BARANGAY_COORDS } from "@/lib/google-maps";
+
 // ========================================================================
 // 1. PUBLIC LISTING DISCOVERY & SEARCH
 // ========================================================================
@@ -140,17 +142,6 @@ export async function searchListings(
     );
   }
 
-const BUTUAN_BARANGAY_COORDS: Record<string, { lat: number; lng: number }> = {
-  Dagohoy: { lat: 8.9482, lng: 125.5432 },
-  Ampayon: { lat: 8.9561, lng: 125.5973 },
-  Libertad: { lat: 8.9430, lng: 125.5120 },
-  "Villa Kananga": { lat: 8.9390, lng: 125.5280 },
-  Doongan: { lat: 8.9510, lng: 125.5520 },
-  "San Vicente": { lat: 8.9550, lng: 125.5350 },
-  Bayanihan: { lat: 8.9495, lng: 125.5390 },
-  "Holy Redeemer": { lat: 8.9410, lng: 125.5360 },
-};
-
   return results.map((h) => {
     if (h.rooms && h.rooms.length > 0) {
       const rents = h.rooms.map((r) => r.monthly_rent);
@@ -166,9 +157,6 @@ const BUTUAN_BARANGAY_COORDS: Record<string, { lat: number; lng: number }> = {
       } else if (raw.barangay && typeof raw.barangay === "string" && BUTUAN_BARANGAY_COORDS[raw.barangay]) {
         h.latitude = BUTUAN_BARANGAY_COORDS[raw.barangay].lat;
         h.longitude = BUTUAN_BARANGAY_COORDS[raw.barangay].lng;
-      } else {
-        h.latitude = 8.9482;
-        h.longitude = 125.5432;
       }
     }
     return h;
@@ -203,6 +191,17 @@ export async function getListingById(idOrSlug: string): Promise<BoardingHouse | 
   }
 
   const house = data[0] as BoardingHouse;
+
+  // Extract real PostGIS coordinates if available
+  const rawHouse = house as unknown as Record<string, unknown>;
+  const loc = rawHouse.location as { coordinates?: number[] } | undefined;
+  if (loc && Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+    house.longitude = loc.coordinates[0];
+    house.latitude = loc.coordinates[1];
+  } else if (house.barangay && BUTUAN_BARANGAY_COORDS[house.barangay]) {
+    house.latitude = BUTUAN_BARANGAY_COORDS[house.barangay].lat;
+    house.longitude = BUTUAN_BARANGAY_COORDS[house.barangay].lng;
+  }
 
   if (house.owner_id) {
     const { data: ownerProfile } = await supabase
@@ -268,8 +267,8 @@ export async function createPropertyAction(data: {
     .replace(/(^-|-$)+/g, "");
   const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
 
-  const lat = data.latitude || 8.9482; // Default to Butuan center
-  const lng = data.longitude || 125.5432;
+  const lat = typeof data.latitude === "number" ? data.latitude : (BUTUAN_BARANGAY_COORDS[data.barangay.trim()]?.lat ?? 8.9482);
+  const lng = typeof data.longitude === "number" ? data.longitude : (BUTUAN_BARANGAY_COORDS[data.barangay.trim()]?.lng ?? 125.5432);
 
   const payload = {
     owner_id: userId,
@@ -325,6 +324,8 @@ export async function updatePropertyAction(
     contact_email: string;
     contact_phone: string;
     cover_image_url: string;
+    latitude?: number;
+    longitude?: number;
   }>
 ): Promise<{ success: boolean; error?: string }> {
   const userId = await getAuthenticatedUserId();
@@ -334,12 +335,23 @@ export async function updatePropertyAction(
 
   const supabase = await createClient();
 
+  const { latitude, longitude, ...rest } = data;
+  const updatePayload: Record<string, unknown> = {
+    ...rest,
+    updated_at: new Date().toISOString(),
+  };
+
+  // If latitude and longitude are updated, serialize to PostGIS POINT geometry
+  if (typeof latitude === "number" && typeof longitude === "number") {
+    updatePayload.location = `POINT(${longitude} ${latitude})`;
+  } else if (rest.barangay && BUTUAN_BARANGAY_COORDS[rest.barangay]) {
+    const coords = BUTUAN_BARANGAY_COORDS[rest.barangay];
+    updatePayload.location = `POINT(${coords.lng} ${coords.lat})`;
+  }
+
   const { error } = await supabase
     .from("boarding_houses")
-    .update({
-      ...data,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", propertyId)
     .eq("owner_id", userId);
 
@@ -1238,13 +1250,25 @@ export async function getOwnerPropertiesAction(): Promise<BoardingHouse[]> {
     return [];
   }
 
-  return (data as BoardingHouse[]).map((h) => ({
-    ...h,
-    min_rent:
-      h.rooms && h.rooms.length > 0
-        ? Math.min(...h.rooms.map((r) => r.monthly_rent))
-        : undefined,
-  }));
+  return (data as BoardingHouse[]).map((h) => {
+    const raw = h as unknown as Record<string, unknown>;
+    const loc = raw.location as { coordinates?: number[] } | undefined;
+    if (loc && Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+      h.longitude = loc.coordinates[0];
+      h.latitude = loc.coordinates[1];
+    } else if (h.barangay && BUTUAN_BARANGAY_COORDS[h.barangay]) {
+      h.latitude = BUTUAN_BARANGAY_COORDS[h.barangay].lat;
+      h.longitude = BUTUAN_BARANGAY_COORDS[h.barangay].lng;
+    }
+
+    return {
+      ...h,
+      min_rent:
+        h.rooms && h.rooms.length > 0
+          ? Math.min(...h.rooms.map((r) => r.monthly_rent))
+          : undefined,
+    };
+  });
 }
 
 /**
@@ -1267,6 +1291,16 @@ export async function getOwnerPropertyByIdAction(
 
   if (error || !data) {
     return null;
+  }
+
+  const raw = data as unknown as Record<string, unknown>;
+  const loc = raw.location as { coordinates?: number[] } | undefined;
+  if (loc && Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+    data.longitude = loc.coordinates[0];
+    data.latitude = loc.coordinates[1];
+  } else if (data.barangay && BUTUAN_BARANGAY_COORDS[data.barangay]) {
+    data.latitude = BUTUAN_BARANGAY_COORDS[data.barangay].lat;
+    data.longitude = BUTUAN_BARANGAY_COORDS[data.barangay].lng;
   }
 
   if (data.rooms) {
