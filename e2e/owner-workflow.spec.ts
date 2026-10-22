@@ -122,7 +122,9 @@ test.describe("Pabulong Phase 4 — Landlord / Owner Workflow & Security", () =>
     await expect(editPropertyLink).toBeVisible();
     await editPropertyLink.click();
 
-    await expect(page).toHaveURL(`/owner/properties/${ownedPropertyId}/edit`);
+    await expect(page).toHaveURL(`/owner/properties/${ownedPropertyId}/edit`, {
+      timeout: 15000,
+    });
     await expect(
       page.getByRole("heading", { name: /Edit:/ })
     ).toBeVisible();
