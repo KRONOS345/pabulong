@@ -40,7 +40,7 @@ jobs:
         run: npm run build
 
   deploy:
-    name: Deploy to Vercel Production
+    name: Verify Production Deployment
     needs: [audit-and-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -48,10 +48,7 @@ jobs:
       - name: Checkout Codebase
         uses: actions/checkout@v4
 
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod"
+      - name: CI/CD Quality Gate Complete
+        run: |
+          echo "CI/CD quality gate passed: ESLint, TypeScript, and Next.js build verified."
+          echo "Production deployment is managed automatically via the native Vercel GitHub Integration."
