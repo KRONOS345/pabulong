@@ -7,6 +7,7 @@ import type { NextRequest, NextFetchEvent } from "next/server";
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/owner(.*)",
+  "/admin(.*)",
   "/api/((?!webhooks).*)",
 ]);
 

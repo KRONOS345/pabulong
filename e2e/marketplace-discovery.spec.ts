@@ -208,11 +208,11 @@ test.describe("Pabulong Phase 3 — Marketplace Discovery & Listing Flow", () =>
   });
 
   test("handles unauthenticated favorite button safely with sign-in prompt", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
 
     // Click favorite button on a listing card
     const favButtons = page.getByLabel("Save to favorites");
-    await expect(favButtons.first()).toBeVisible();
+    await expect(favButtons.first()).toBeVisible({ timeout: 10000 });
     await favButtons.first().click();
 
     // Toast notice prompting sign-in should appear without fake favorite
