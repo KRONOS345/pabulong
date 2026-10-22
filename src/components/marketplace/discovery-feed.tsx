@@ -300,11 +300,12 @@ export function DiscoveryFeed({
           {/* Mode 1: Standard Grid View */}
           {viewMode === "grid" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedListings.map((house) => (
+              {sortedListings.map((house, idx) => (
                 <ListingCard
                   key={house.id}
                   house={house}
                   isFavorited={favoriteIds.includes(house.id)}
+                  priority={idx < 3}
                 />
               ))}
             </div>
@@ -314,7 +315,7 @@ export function DiscoveryFeed({
           {viewMode === "split" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-6 space-y-4 max-h-[720px] overflow-y-auto pr-1">
-                {sortedListings.map((house) => (
+                {sortedListings.map((house, idx) => (
                   <div
                     key={house.id}
                     onMouseEnter={() => setHoveredPropertyId(house.id)}
@@ -324,6 +325,7 @@ export function DiscoveryFeed({
                     <ListingCard
                       house={house}
                       isFavorited={favoriteIds.includes(house.id)}
+                      priority={idx < 2}
                     />
                   </div>
                 ))}

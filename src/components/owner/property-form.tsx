@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { createPropertyAction, updatePropertyAction } from "@/actions/marketplace";
 import type { BoardingHouse, GenderRestriction } from "@/lib/marketplace-types";
 import { PropertyLocationPicker } from "@/components/owner/property-location-picker";
+import { PhotoUploadField } from "@/components/owner/photo-upload-field";
 
 const BUTUAN_BARANGAYS = [
   "Libertad",
@@ -301,18 +302,10 @@ export function PropertyForm({ initialData, isEdit = false }: PropertyFormProps)
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="coverImageUrl" className="text-xs font-semibold">
-                Cover Photo URL
-              </Label>
-              <Input
-                id="coverImageUrl"
-                placeholder="https://images.unsplash.com/..."
-                value={coverImageUrl}
-                onChange={(e) => setCoverImageUrl(e.target.value)}
-                className="bg-background"
-              />
-            </div>
+            <PhotoUploadField
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+            />
           </div>
         </CardContent>
       </Card>

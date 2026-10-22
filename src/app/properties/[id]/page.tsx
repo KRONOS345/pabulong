@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -25,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PropertyLocationMap } from "@/components/properties/property-location-map";
+import { PropertyImage } from "@/components/ui/property-image";
 import type { Room } from "@/lib/marketplace-types";
 
 interface PropertyPageProps {
@@ -166,25 +166,34 @@ export default async function PropertyDetailPage({ params }: PropertyPageProps) 
             {/* Photo Gallery Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 rounded-2xl overflow-hidden border border-border/70 shadow-sm">
               <div className="md:col-span-2 relative aspect-[16/10] bg-muted overflow-hidden">
-                <img
+                <PropertyImage
                   src={coverUrl}
                   alt={house.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  priority={true}
+                  sizes="(max-width: 768px) 100vw, 66vw"
+                  className="object-cover"
                 />
               </div>
               <div className="hidden md:grid grid-rows-2 gap-3.5">
                 <div className="relative aspect-[16/10] bg-muted overflow-hidden">
-                  <img
+                  <PropertyImage
                     src="https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=600&q=80"
                     alt={`${house.name} interior space`}
-                    className="w-full h-full object-cover"
+                    fill
+                    priority={false}
+                    sizes="33vw"
+                    className="object-cover"
                   />
                 </div>
                 <div className="relative aspect-[16/10] bg-muted overflow-hidden">
-                  <img
+                  <PropertyImage
                     src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80"
                     alt={`${house.name} room view`}
-                    className="w-full h-full object-cover"
+                    fill
+                    priority={false}
+                    sizes="33vw"
+                    className="object-cover"
                   />
                 </div>
               </div>

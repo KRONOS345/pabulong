@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
 import Link from "next/link";
 import {
@@ -11,13 +10,18 @@ import {
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PropertyImage } from "@/components/ui/property-image";
 import type { BoardingHouse } from "@/lib/marketplace-types";
 
 interface OwnerPropertyCardProps {
   property: BoardingHouse;
+  priority?: boolean;
 }
 
-export function OwnerPropertyCard({ property }: OwnerPropertyCardProps) {
+export function OwnerPropertyCard({
+  property,
+  priority = false,
+}: OwnerPropertyCardProps) {
   const rooms = property.rooms || [];
   const roomCount = rooms.length;
   const availableBeds = rooms.reduce(
@@ -35,18 +39,17 @@ export function OwnerPropertyCard({ property }: OwnerPropertyCardProps) {
     property.min_rent ||
     (rooms.length > 0 ? Math.min(...rooms.map((r) => r.monthly_rent)) : null);
 
-  const coverUrl =
-    property.cover_image_url ||
-    "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80";
-
   return (
     <Card className="overflow-hidden border-border/60 bg-card/60 backdrop-blur shadow-sm hover:border-border transition-all flex flex-col group">
       {/* Property Thumbnail & Status Overlay */}
       <div className="relative aspect-[16/9] w-full bg-muted overflow-hidden">
-        <img
-          src={coverUrl}
+        <PropertyImage
+          src={property.cover_image_url}
           alt={property.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          fill
+          priority={priority}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 

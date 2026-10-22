@@ -228,6 +228,49 @@ export async function getListingById(idOrSlug: string): Promise<BoardingHouse | 
 // ========================================================================
 
 /**
+ * Server-side validator for cover image URLs and compressed data payloads.
+ * Validates protocol, file format, size limits, and prevents dangerous schemes.
+ */
+function validateCoverImageUrl(url?: string | null): { valid: boolean; error?: string } {
+  if (!url || !url.trim()) return { valid: true };
+  const trimmed = url.trim();
+
+  // Validate HTTP/HTTPS remote URLs
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    if (trimmed.length > 2048) {
+      return { valid: false, error: "Image URL exceeds maximum allowed length (2048 characters)." };
+    }
+    try {
+      new URL(trimmed);
+      return { valid: true };
+    } catch {
+      return { valid: false, error: "Invalid image URL format." };
+    }
+  }
+
+  // Validate client-compressed data URIs
+  if (trimmed.startsWith("data:image/")) {
+    const match = trimmed.match(/^data:image\/(webp|jpeg|png|avif);base64,/i);
+    if (!match) {
+      return {
+        valid: false,
+        error: "Image data URI must be a valid WebP, JPEG, PNG, or AVIF base64 payload.",
+      };
+    }
+    // Cap base64 string at 5MB (~3.5MB unencoded image)
+    if (trimmed.length > 5 * 1024 * 1024) {
+      return { valid: false, error: "Image file exceeds maximum upload size (3.5MB)." };
+    }
+    return { valid: true };
+  }
+
+  return {
+    valid: false,
+    error: "Image must be a valid HTTPS URL or supported image format (WebP, JPEG, PNG).",
+  };
+}
+
+/**
  * Create a new boarding house property.
  * Strictly derives owner_id from Clerk session.
  */
@@ -256,6 +299,13 @@ export async function createPropertyAction(data: {
 
   if (!data.name?.trim() || !data.address?.trim() || !data.barangay?.trim()) {
     return { success: false, error: "Name, address, and barangay are required" };
+  }
+
+  if (data.cover_image_url) {
+    const imgValidation = validateCoverImageUrl(data.cover_image_url);
+    if (!imgValidation.valid) {
+      return { success: false, error: imgValidation.error };
+    }
   }
 
   const supabase = await createClient();
@@ -331,6 +381,13 @@ export async function updatePropertyAction(
   const userId = await getAuthenticatedUserId();
   if (!userId) {
     return { success: false, error: "Authentication required" };
+  }
+
+  if (data.cover_image_url !== undefined && data.cover_image_url !== null) {
+    const imgValidation = validateCoverImageUrl(data.cover_image_url);
+    if (!imgValidation.valid) {
+      return { success: false, error: imgValidation.error };
+    }
   }
 
   const supabase = await createClient();

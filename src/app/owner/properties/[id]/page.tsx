@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PropertyImage } from "@/components/ui/property-image";
 import { getOwnerPropertyByIdAction } from "@/actions/marketplace";
 
 export const dynamic = "force-dynamic";
@@ -67,10 +67,13 @@ export default async function OwnerPropertyDetailPage({
       {/* Property Hero Banner */}
       <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-card">
         <div className="relative aspect-[21/9] sm:aspect-[24/8] w-full bg-muted overflow-hidden">
-          <img
+          <PropertyImage
             src={coverUrl}
             alt={property.name}
-            className="w-full h-full object-cover"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 

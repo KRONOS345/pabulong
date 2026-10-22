@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import * as React from "react";
@@ -16,14 +15,20 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FavoriteButton } from "@/components/marketplace/favorite-button";
+import { PropertyImage } from "@/components/ui/property-image";
 import type { BoardingHouse } from "@/lib/marketplace-types";
 
 interface ListingCardProps {
   house: BoardingHouse;
   isFavorited?: boolean;
+  priority?: boolean;
 }
 
-export function ListingCard({ house, isFavorited = false }: ListingCardProps) {
+export function ListingCard({
+  house,
+  isFavorited = false,
+  priority = false,
+}: ListingCardProps) {
   // Compute minimum monthly rent across rooms or use default
   const startingPrice = React.useMemo(() => {
     if (house.min_rent && house.min_rent > 0) return house.min_rent;
@@ -47,24 +52,18 @@ export function ListingCard({ house, isFavorited = false }: ListingCardProps) {
     coed: { label: "Co-ed", color: "bg-secondary text-secondary-foreground border-border/80" },
   }[house.gender_restriction] || { label: "Co-ed", color: "bg-secondary text-secondary-foreground border-border/80" };
 
-  const defaultPhoto = "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80";
-  const coverUrl = house.cover_image_url || defaultPhoto;
-
   return (
     <Card className="group overflow-hidden flex flex-col h-full bg-card border-border/80 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 rounded-2xl">
       {/* Photo Media Container */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-        <Link href={`/properties/${house.id}`} className="block w-full h-full">
-          <img
-            src={coverUrl}
+        <Link href={`/properties/${house.id}`} className="block w-full h-full relative">
+          <PropertyImage
+            src={house.cover_image_url}
             alt={house.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              if (e.currentTarget.src !== defaultPhoto) {
-                e.currentTarget.src = defaultPhoto;
-              }
-            }}
+            fill
+            priority={priority}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 380px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
 
